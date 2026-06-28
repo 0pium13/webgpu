@@ -1,13 +1,13 @@
 "use client";
 
 const TASKS = [
-  { icon: "🖼", name: "Upscale image to 4K", time: "~3s", minTier: 0, link: "https://useyourgpu.com/upscale" },
-  { icon: "✂️", name: "Remove background (real-time)", time: "~1s", minTier: 0, link: "https://useyourgpu.com/bg-remove" },
-  { icon: "🎙", name: "Live meeting transcription", time: "real-time", minTier: 0, link: "https://useyourgpu.com/transcribe" },
-  { icon: "🔬", name: "Upscale image to 8K", time: "~45s", minTier: 1, link: "https://useyourgpu.com/upscale" },
-  { icon: "🤖", name: "Local 7B chat model", time: "~8 tok/s", minTier: 1, link: "https://useyourgpu.com/chat" },
-  { icon: "🎬", name: "Video upscale & repair", time: "~4 min/min", minTier: 2, link: "https://useyourgpu.com/video" },
-  { icon: "✨", name: "Generate video (LTX / Wan)", time: "cloud only", minTier: 99, link: "https://useyourgpu.com/generate" },
+  { icon: "🖼", name: "Upscale image to 4K", time: "~3s", minTier: 0, link: "/upscale" },
+  { icon: "✂️", name: "Remove background (real-time)", time: "~1s", minTier: 0, link: "/bg-remove" },
+  { icon: "🎙", name: "Live meeting transcription", time: "real-time", minTier: 0, link: "/transcribe" },
+  { icon: "🔬", name: "Upscale image to 8K", time: "~45s", minTier: 1, link: "/upscale" },
+  { icon: "🤖", name: "Local 7B chat model", time: "~8 tok/s", minTier: 1, link: "/chat" },
+  { icon: "🎬", name: "Video upscale & repair", time: "~4 min/min", minTier: 2, link: "/upscale" },
+  { icon: "✨", name: "Generate video (LTX / Wan)", time: "cloud only", minTier: 99, link: "/generate" },
 ];
 
 const TIER_NAMES = ["Entry", "Solid", "Strong", "Beast"];

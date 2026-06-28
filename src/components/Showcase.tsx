@@ -1,12 +1,12 @@
 "use client";
 
 const ITEMS = [
-  { tag: "AI tool",     title: "Free 4K Image Upscaler",          desc: "Real-ESRGAN in your browser tab. No upload.",         href: "https://useyourgpu.com/upscale" },
-  { tag: "AI tool",     title: "Background Remover",              desc: "RMBG-2.0 running locally on your GPU.",               href: "https://useyourgpu.com/bg-remove" },
+  { tag: "AI tool",     title: "Free 4K Video Upscaler",          desc: "ffmpeg + AI upscaling in your browser. No upload.",   href: "/upscale" },
+  { tag: "AI tool",     title: "Background Remover",              desc: "RMBG-2.0 running locally on your GPU.",               href: "/bg-remove" },
   { tag: "demo",        title: "GPU Physics Simulation",          desc: "10,000 rigid bodies at 60fps via compute shaders.",   href: "#" },
-  { tag: "AI tool",     title: "Local LLM Chat",                  desc: "Llama 3 8B running in your browser. Fully private.",  href: "https://useyourgpu.com/chat" },
+  { tag: "AI tool",     title: "Local LLM Chat",                  desc: "Llama 3 8B running in your browser. Fully private.",  href: "/chat" },
   { tag: "demo",        title: "Real-time Fluid Dynamics",        desc: "Navier-Stokes on the GPU. No server needed.",         href: "#" },
-  { tag: "AI tool",     title: "Meeting Transcriber",             desc: "Whisper. Your audio never leaves your machine.",      href: "https://useyourgpu.com/transcribe" },
+  { tag: "AI tool",     title: "Meeting Transcriber",             desc: "Whisper. Your audio never leaves your machine.",      href: "/transcribe" },
   { tag: "library",     title: "WebLLM",                          desc: "High-performance in-browser LLM inference. 17k stars.", href: "https://github.com/mlc-ai/web-llm" },
   { tag: "library",     title: "Transformers.js",                 desc: "HuggingFace models in-browser. WebGPU backend.",     href: "https://github.com/xenova/transformers.js" },
 ];

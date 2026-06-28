@@ -31,10 +31,10 @@ export default function Footer() {
         {
           label: "Tools",
           links: [
-            { name: "4K Upscaler", href: "https://useyourgpu.com/upscale" },
-            { name: "BG Remover", href: "https://useyourgpu.com/bg-remove" },
-            { name: "Transcriber", href: "https://useyourgpu.com/transcribe" },
-            { name: "Local LLM", href: "https://useyourgpu.com/chat" },
+            { name: "4K Upscaler", href: "/upscale" },
+            { name: "BG Remover", href: "/bg-remove" },
+            { name: "Transcriber", href: "/transcribe" },
+            { name: "Local LLM", href: "/chat" },
           ],
         },
         {

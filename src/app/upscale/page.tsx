@@ -32,7 +32,7 @@ export default function UpscalePage() {
             className="mono"
             style={{ fontSize: 11, letterSpacing: "0.15em", color: "var(--accent)", textTransform: "uppercase" }}
           >
-            useyourgpu.com / upscale
+            webgpu.in / upscale
           </span>
           <h1
             style={{
