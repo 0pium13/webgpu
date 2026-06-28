@@ -80,6 +80,11 @@ body::before {
   to   { transform: rotate(360deg); }
 }
 
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.8); }
+}
+
 .scan-line {
   position: absolute;
   left: 0; right: 0; top: 0;
