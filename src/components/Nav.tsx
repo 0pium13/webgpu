@@ -31,6 +31,20 @@ export default function Nav() {
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
+        <a
+          href="/upscale"
+          style={{
+            fontSize: 13,
+            color: "var(--accent)",
+            textDecoration: "none",
+            padding: "5px 12px",
+            background: "var(--accent-dim)",
+            borderRadius: 6,
+            fontWeight: 500,
+          }}
+        >
+          ⚡ Upscaler
+        </a>
         {["Showcase", "Tools", "News", "Learn"].map((item) => (
           <a
             key={item}
