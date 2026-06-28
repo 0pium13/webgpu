@@ -85,6 +85,11 @@ body::before {
   50%      { opacity: 0.4; transform: scale(0.8); }
 }
 
+@keyframes eq {
+  0%, 100% { transform: scaleY(0.3); opacity: 0.5; }
+  50%      { transform: scaleY(1); opacity: 1; }
+}
+
 .scan-line {
   position: absolute;
   left: 0; right: 0; top: 0;

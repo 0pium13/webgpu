@@ -21,7 +21,6 @@ export default function GPUAnalytics() {
   const [report, setReport] = useState<DeviceReport | null>(null);
   const [phase, setPhase] = useState<Phase>("detect");
   const [score, setScore] = useState(0);
-  const [scramble, setScramble] = useState(0);
   const started = useRef(false);
 
   // run the real benchmark once
@@ -45,13 +44,6 @@ export default function GPUAnalytics() {
     });
   }, []);
 
-  // scrambling number while benchmarking (anticipation)
-  useEffect(() => {
-    if (report) return;
-    const iv = setInterval(() => setScramble(Math.floor(Math.random() * 9000) + 500), 70);
-    return () => clearInterval(iv);
-  }, [report]);
-
   const done = !!report;
 
   return (
@@ -70,11 +62,25 @@ export default function GPUAnalytics() {
       >
         {!done ? (
           /* ---- benchmarking state ---- */
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 18, padding: "24px 0" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, padding: "28px 0" }}>
             <div className="scan-line" />
-            <span className="mono" style={{ fontSize: 48, fontWeight: 500, color: "var(--text-muted)", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>
-              {scramble.toLocaleString()}
-            </span>
+            {/* CSS-only loading bars — no React re-renders, so the benchmark
+                timing stays accurate */}
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 44 }}>
+              {[0, 1, 2, 3, 4].map((i) => (
+                <span
+                  key={i}
+                  style={{
+                    width: 6,
+                    height: "100%",
+                    borderRadius: 3,
+                    background: "var(--accent)",
+                    transformOrigin: "bottom",
+                    animation: `eq 1s ease-in-out ${i * 0.12}s infinite`,
+                  }}
+                />
+              ))}
+            </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--accent)", animation: "pulse 1s ease-in-out infinite" }} />
               <span style={{ fontSize: 14, color: "var(--text-secondary)" }}>{PHASE_TEXT[phase]}…</span>

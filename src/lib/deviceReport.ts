@@ -136,17 +136,27 @@ async function runBenchmark(
     return performance.now() - t0;
   }
 
-  await run(64); // warmup
-  let iters = 512;
+  // warm up so GPU clocks ramp before we measure
+  await run(64);
+  await run(256);
+
+  // calibrate up to a ~200ms run so fixed scheduling overhead is negligible
+  let iters = 1024;
   let t = await run(iters);
-  while (t < 60 && iters < 80000) {
-    iters *= 3;
+  while (t < 200 && iters < 300000) {
+    iters *= 2;
     t = await run(iters);
   }
-  const times = [await run(iters), await run(iters), await run(iters)].sort((a, b) => a - b);
-  const med = times[1];
+
+  // take the BEST (min time) of several runs — rejects runs disturbed by
+  // GPU contention / compositing, giving a stable, repeatable throughput
+  let best = Infinity;
+  for (let i = 0; i < 6; i++) {
+    const tt = await run(iters);
+    if (tt < best) best = tt;
+  }
   const flops = N * iters * 4; // 2 fma × 2 flops
-  return flops / (med / 1000) / 1e9;
+  return flops / (best / 1000) / 1e9;
 }
 
 function tierFromGflops(g: number): Tier {
@@ -174,6 +184,7 @@ function percentileFromGflops(g: number): number {
 }
 
 let cached: DeviceReport | null = null;
+let inflight: Promise<DeviceReport> | null = null;
 
 export async function generateReport(
   onPhase?: (phase: Phase) => void
@@ -182,7 +193,17 @@ export async function generateReport(
     onPhase?.("done");
     return cached;
   }
+  // share a single in-flight benchmark across concurrent callers (the hero
+  // report card + the leaderboard both request it on mount) — running two
+  // benchmarks at once would make them fight for the GPU and skew results
+  if (inflight) return inflight;
+  inflight = runReport(onPhase);
+  return inflight;
+}
 
+async function runReport(
+  onPhase?: (phase: Phase) => void
+): Promise<DeviceReport> {
   const gpu = getGpuName();
   const cpuCores = navigator.hardwareConcurrency || 0;
   const ramGb = (navigator as any).deviceMemory ?? null;
