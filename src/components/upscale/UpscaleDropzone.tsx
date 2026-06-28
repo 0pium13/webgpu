@@ -7,7 +7,8 @@ export default function UpscaleDropzone({ onFile }: { onFile: (f: File) => void 
   const [dragging, setDragging] = useState(false);
 
   const accept = (file: File) => {
-    if (!file.type.startsWith("video/")) return alert("Please drop a video file.");
+    if (!file.type.startsWith("video/") && !file.type.startsWith("image/"))
+      return alert("Please drop a video or image file.");
     onFile(file);
   };
 
@@ -37,7 +38,7 @@ export default function UpscaleDropzone({ onFile }: { onFile: (f: File) => void 
       <input
         ref={inputRef}
         type="file"
-        accept="video/*"
+        accept="video/*,image/*"
         style={{ display: "none" }}
         onChange={(e) => { const f = e.target.files?.[0]; if (f) accept(f); }}
       />
@@ -60,10 +61,10 @@ export default function UpscaleDropzone({ onFile }: { onFile: (f: File) => void 
       </div>
 
       <p style={{ fontSize: 17, fontWeight: 500, marginBottom: 8 }}>
-        Drop your video here
+        Drop your video or image here
       </p>
       <p style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 20 }}>
-        MP4, MOV, AVI, WebM — up to 2GB
+        MP4, MOV, WebM · PNG, JPG, WebP — up to 2GB
       </p>
 
       <button
