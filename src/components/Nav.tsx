@@ -34,16 +34,20 @@ export default function Nav() {
         <a
           href="/upscale"
           style={{
-            fontSize: 13,
-            color: "var(--accent)",
-            textDecoration: "none",
-            padding: "5px 12px",
-            background: "var(--accent-dim)",
-            borderRadius: 6,
-            fontWeight: 500,
+            fontSize: 13, color: "var(--accent)", textDecoration: "none",
+            padding: "5px 12px", background: "var(--accent-dim)", borderRadius: 6, fontWeight: 500,
           }}
         >
           ⚡ Upscaler
+        </a>
+        <a
+          href="/rotoscope"
+          style={{
+            fontSize: 13, color: "var(--accent)", textDecoration: "none",
+            padding: "5px 12px", background: "var(--accent-dim)", borderRadius: 6, fontWeight: 500,
+          }}
+        >
+          🎯 Rotoscope
         </a>
         {["Showcase", "Tools", "News", "Learn"].map((item) => (
           <a
