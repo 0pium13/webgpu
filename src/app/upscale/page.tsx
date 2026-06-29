@@ -54,7 +54,7 @@ export default function UpscalePage() {
         ) : input.isImage ? (
           <ImageProcessor input={input} scale={scale} onReset={reset} />
         ) : (
-          <WebSRVideoProcessor input={input} onReset={reset} />
+          <WebSRVideoProcessor input={input} scale={scale} onReset={reset} />
         )}
       </div>
     </div>
