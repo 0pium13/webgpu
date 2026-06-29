@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Nav from "@/components/Nav";
 import UpscaleDropzone from "@/components/upscale/UpscaleDropzone";
-import UpscaleProcessor from "@/components/upscale/UpscaleProcessor";
+import WebSRVideoProcessor from "@/components/upscale/WebSRVideoProcessor";
 import ImageProcessor from "@/components/upscale/ImageProcessor";
 import { useGPU, TIER_COLOR, formatDuration } from "@/lib/useGPU";
 
@@ -54,7 +54,7 @@ export default function UpscalePage() {
         ) : input.isImage ? (
           <ImageProcessor input={input} scale={scale} onReset={reset} />
         ) : (
-          <UpscaleProcessor input={input} scale={scale} onReset={reset} />
+          <WebSRVideoProcessor input={input} onReset={reset} />
         )}
       </div>
     </div>
@@ -62,14 +62,7 @@ export default function UpscalePage() {
 }
 
 function GpuBanner({ gpu, scale }: { gpu: ReturnType<typeof useGPU>; scale: UpscaleScale }) {
-  const mult = scale === "4x" ? 4 : 2;
-  // est. for a typical 1-min 1080p clip
-  const perTier = [
-    { img: "~2s", vid: "~6 min" },
-    { img: "~1s", vid: "~3 min" },
-    { img: "<1s", vid: "~90s" },
-    { img: "instant", vid: "~50s" },
-  ][gpu.tier];
+  const imgEst = ["~2s", "~1s", "<1s", "instant"][gpu.tier];
 
   return (
     <div
@@ -91,8 +84,8 @@ function GpuBanner({ gpu, scale }: { gpu: ReturnType<typeof useGPU>; scale: Upsc
         ) : (
           <>
             Detected <span style={{ color: "var(--text)" }} className="mono">{gpu.name.split(" ").slice(0, 3).join(" ")}</span>{" "}
-            · on your GPU a {scale} image takes <span style={{ color: TIER_COLOR[gpu.tier] }}>{perTier.img}</span>,
-            a 1-min 1080p video <span style={{ color: TIER_COLOR[gpu.tier] }}>{perTier.vid}</span>
+            · images upscale in <span style={{ color: TIER_COLOR[gpu.tier] }}>{imgEst}</span>;
+            video uses real AI (Anime4K) and processes in <span style={{ color: TIER_COLOR[gpu.tier] }}>real time</span>
           </>
         )}
       </p>
