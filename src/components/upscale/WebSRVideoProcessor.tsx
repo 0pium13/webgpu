@@ -6,7 +6,7 @@ import CompareSlider from "./CompareSlider";
 import { createUpscaler, type Content } from "@/lib/websr";
 import { formatDuration } from "@/lib/useGPU";
 import { getFFmpeg, setFFmpegCallbacks } from "@/lib/ffmpeg";
-import { upscaleToCanvas, loadSR } from "@/lib/superres";
+import { upscaleToCanvas, loadSR, estimateTiles } from "@/lib/superres";
 
 type Phase = "idle" | "init" | "processing" | "transcoding" | "done" | "error";
 type Engine = "anime4k" | "swin2sr";
@@ -196,6 +196,12 @@ export default function WebSRVideoProcessor({
   const [meta, setMeta] = useState<{ w: number; h: number; duration: number } | null>(null);
   const [content, setContent] = useState<Content>("rl");
   const [fastMode, setFastMode] = useState(false);
+  // For real-life content, the user can trade detail quality for speed: Swin2SR
+  // genuinely reconstructs detail but is tile-by-tile slow; Anime4K (using its
+  // real-life-tuned weights, not the anime ones) is much faster but does far
+  // less to the image. Anime content always uses Anime4K — it's purpose-built
+  // for line art and there's no slow "quality" alternative worth offering.
+  const [qualityPreferred, setQualityPreferred] = useState(true);
   const [hasVE, setHasVE] = useState(false);
   const [outUrl, setOutUrl] = useState<string | null>(null);
   const [outSize, setOutSize] = useState(0);
@@ -204,9 +210,7 @@ export default function WebSRVideoProcessor({
   const startRef = useRef(0);
   const abortRef = useRef(false);
 
-  // Real footage gets the real photo-detail engine (Swin2SR). Anime/cartoon keeps
-  // Anime4K, which is purpose-built for line art and fast enough to run live.
-  const engine: Engine = content === "rl" ? "swin2sr" : "anime4k";
+  const engine: Engine = content === "an" ? "anime4k" : (qualityPreferred ? "swin2sr" : "anime4k");
 
   useEffect(() => { setHasVE("VideoEncoder" in window); }, []);
 
@@ -497,7 +501,11 @@ export default function WebSRVideoProcessor({
 
       const video = videoRef.current!;
       const canvas = canvasRef.current!;
-      const fps = 30;
+      // Swin2SR reconstructs every output frame from scratch via tiled inference —
+      // there's no cheap way to interpolate between frames. 30fps here would mean
+      // 3x the tiles (and time) of what's actually needed for a smooth-looking
+      // result, so Quality mode samples at a lower rate by default.
+      const fps = 12;
 
       video.src = input.url;
       video.muted = true;
@@ -534,17 +542,19 @@ export default function WebSRVideoProcessor({
         if (abortRef.current || encoderErr) break;
 
         await seekToFrame(video, i / fps);
-        const out = await upscaleToCanvas(video, mul as 2 | 4);
+        const out = await upscaleToCanvas(video, mul as 2 | 4, (p) => {
+          if (p.phase === "tile") {
+            const frameFraction = p.done / p.total;
+            setPct(Math.min(99, Math.round(((i + frameFraction) / totalFrames) * 100)));
+            setMsg(`Reconstructing detail… frame ${i + 1}/${totalFrames} · tile ${p.done}/${p.total}`);
+          }
+        });
         ctx.drawImage(out, 0, 0);
 
         const ts = Math.round((i / fps) * 1_000_000);
         const frame = new (window as any).VideoFrame(canvas, { timestamp: ts });
         encoder.encode(frame, { keyFrame: i % 60 === 0 });
         frame.close();
-
-        const elapsed = (Date.now() - startRef.current) / 1000;
-        setPct(Math.min(99, Math.round((i / totalFrames) * 100)));
-        setSpeed(elapsed / Math.max(1, i + 1)); // seconds per frame
 
         while (encoder.encodeQueueSize > 10) {
           await new Promise((r) => setTimeout(r, 5));
@@ -587,6 +597,19 @@ export default function WebSRVideoProcessor({
   const busy = phase === "init" || phase === "processing" || phase === "transcoding";
   const elapsed = startRef.current ? (Date.now() - startRef.current) / 1000 : 0;
 
+  // Rough pre-flight estimate for Quality mode, so users aren't surprised by a
+  // multi-hour run: Swin2SR reconstructs every sampled frame tile-by-tile, with
+  // no cheap interpolation between frames. ~1.8s/tile is a representative figure
+  // from in-browser measurement on this engine; actual speed varies by GPU.
+  const qualityEstimate = (() => {
+    if (engine !== "swin2sr" || !meta) return null;
+    const qualityFps = 12;
+    const frames = Math.ceil(meta.duration * qualityFps);
+    const tiles = estimateTiles(meta.w, meta.h);
+    const totalSeconds = frames * tiles * 1.8;
+    return { frames, tilesPerFrame: tiles, totalSeconds };
+  })();
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
 
@@ -627,6 +650,29 @@ export default function WebSRVideoProcessor({
             </span>
           </div>
 
+          {/* Engine picker — only for real-life content; anime always uses Anime4K */}
+          {content === "rl" && (
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <span style={{ fontSize: 13, color: "var(--text-muted)", minWidth: 60 }}>Engine:</span>
+              {([
+                [true, "Quality", "Swin2SR · real detail reconstruction · slow"],
+                [false, "Fast", "Anime4K · much quicker · far less detail"],
+              ] as [boolean, string, string][]).map(([v, label, sub]) => (
+                <button key={String(v)} onClick={() => setQualityPreferred(v)}
+                  style={{
+                    padding: "7px 14px", borderRadius: 8, fontSize: 13, fontWeight: 500,
+                    cursor: "pointer", textAlign: "left",
+                    border: qualityPreferred === v ? "0.5px solid var(--accent)" : "0.5px solid var(--border)",
+                    background: qualityPreferred === v ? "var(--accent-dim)" : "transparent",
+                    color: qualityPreferred === v ? "var(--accent)" : "var(--text-muted)",
+                  }}>
+                  {label}
+                  <span style={{ fontSize: 11, display: "block", opacity: 0.65, marginTop: 1 }}>{sub}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Mode picker — only meaningful for the Anime4K engine; Swin2SR has no realtime path */}
           {hasVE && engine === "anime4k" && (
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -654,6 +700,24 @@ export default function WebSRVideoProcessor({
             <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
               Real detail reconstruction, not interpolation — processes frame-by-frame and is much slower than real-time. Best for shorter clips.
             </p>
+          )}
+
+          {engine === "swin2sr" && qualityEstimate && (
+            <div style={{
+              background: qualityEstimate.totalSeconds > 300 ? "rgba(239,68,68,0.1)" : "var(--surface)",
+              border: `0.5px solid ${qualityEstimate.totalSeconds > 300 ? "rgba(239,68,68,0.3)" : "var(--border)"}`,
+              borderRadius: 10, padding: "10px 14px",
+            }}>
+              <p style={{ fontSize: 13, color: qualityEstimate.totalSeconds > 300 ? "#ef4444" : "var(--text-secondary)" }}>
+                Estimated time: <strong>~{formatDuration(qualityEstimate.totalSeconds)}</strong>
+                {" "}({qualityEstimate.frames} frames × {qualityEstimate.tilesPerFrame} tiles each)
+              </p>
+              {qualityEstimate.totalSeconds > 300 && (
+                <p style={{ fontSize: 12, color: "rgba(239,68,68,0.85)", marginTop: 4 }}>
+                  That's a long run for a browser tab. Switch the Engine above to "Fast" for a result in minutes instead of hours — it'll do far less to the image, but it'll actually finish. Quality mode is best kept for short clips (a few seconds) at this resolution.
+                </p>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -745,11 +809,11 @@ export default function WebSRVideoProcessor({
                   background: "var(--accent)", animation: "pulse 1s ease-in-out infinite", flexShrink: 0,
                 }} />
                 <span style={{ fontSize: 13, color: "#fff", flex: 1 }}>
-                  {engine === "swin2sr" ? "Reconstructing detail…" : "Upscaling…"} {pct}%
+                  {engine === "swin2sr" ? msg : `Upscaling… ${pct}%`}
                 </span>
-                <span className="mono" style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
+                <span className="mono" style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", flexShrink: 0 }}>
                   {engine === "swin2sr"
-                    ? (speed > 0 ? `${speed.toFixed(1)}s/frame` : "")
+                    ? (pct > 2 ? `~${formatDuration((elapsed / pct) * (100 - pct))} left` : "")
                     : fastMode && speed > 0
                       ? `${speed.toFixed(1)}× realtime`
                       : !fastMode && pct > 2

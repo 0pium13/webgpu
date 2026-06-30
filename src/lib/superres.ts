@@ -67,6 +67,13 @@ export function srDevice() {
   return usedDevice;
 }
 
+const TILE = 128; // input tile core size — also used by estimateTiles below
+
+/** Number of tiles upscaleToCanvas will process for a given source size. */
+export function estimateTiles(srcW: number, srcH: number): number {
+  return Math.ceil(srcW / TILE) * Math.ceil(srcH / TILE);
+}
+
 /** Build a transformers.js RawImage (RGB) from a region of a source canvas. */
 async function rawFromRegion(
   src: CanvasImageSource & { width?: number; height?: number },
@@ -112,7 +119,6 @@ export async function upscaleToCanvas(
   const x4ctx = x4.getContext("2d")!;
 
   // Tile the source with overlap so the model sees context → no visible seams.
-  const TILE = 128;   // input tile core size
   const OVER = 16;    // context margin pulled from neighbours
   const stepsX = Math.ceil(srcW / TILE);
   const stepsY = Math.ceil(srcH / TILE);
