@@ -132,8 +132,12 @@ export default function WebSRVideoProcessor({
       ]);
       // Play briefly so the GPU pipeline allocates a back resource for the frame
       await primeVideoFrame(video);
-      await ws1.render(video);    // video → canvas1 (2x)
-      await ws2.render(canvas1);  // canvas1 → canvas (4x)
+      await ws1.render(video);
+      // WebSR render() only accepts HTMLVideoElement or VideoFrame (uses importExternalTexture).
+      // A raw HTMLCanvasElement would silently fail. Wrap canvas1 in VideoFrame for pass 2.
+      const primeVF = new (window as any).VideoFrame(canvas1, { timestamp: 0 });
+      await ws2.render(primeVF);
+      primeVF.close();
       return { ws1, ws2 };
     } else {
       const ws1 = await createUpscaler(canvas, "m", content);
@@ -151,7 +155,10 @@ export default function WebSRVideoProcessor({
   ) {
     if (ws2) {
       await ws1.render(src);
-      await ws2.render(canvas1);
+      // WebSR only accepts HTMLVideoElement/VideoFrame — canvas must be wrapped
+      const vf = new (window as any).VideoFrame(canvas1, { timestamp: 0 });
+      await ws2.render(vf);
+      vf.close();
     } else {
       await ws1.render(src);
     }
