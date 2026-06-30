@@ -599,14 +599,14 @@ export default function WebSRVideoProcessor({
 
   // Rough pre-flight estimate for Quality mode, so users aren't surprised by a
   // multi-hour run: Swin2SR reconstructs every sampled frame tile-by-tile, with
-  // no cheap interpolation between frames. ~1.8s/tile is a representative figure
-  // from in-browser measurement on this engine; actual speed varies by GPU.
+  // no cheap interpolation between frames. ~6.1s/tile is a representative figure
+  // measured in-browser at the current 256px tile size; actual speed varies by GPU.
   const qualityEstimate = (() => {
     if (engine !== "swin2sr" || !meta) return null;
     const qualityFps = 12;
     const frames = Math.ceil(meta.duration * qualityFps);
     const tiles = estimateTiles(meta.w, meta.h);
-    const totalSeconds = frames * tiles * 1.8;
+    const totalSeconds = frames * tiles * 6.1;
     return { frames, tilesPerFrame: tiles, totalSeconds };
   })();
 

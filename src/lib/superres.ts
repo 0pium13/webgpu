@@ -75,7 +75,7 @@ export function srDevice() {
   return usedDevice;
 }
 
-const TILE = 128; // input tile core size — also used by estimateTiles below
+const TILE = 256; // input tile core size — also used by estimateTiles below
 
 /** Number of tiles upscaleToCanvas will process for a given source size. */
 export function estimateTiles(srcW: number, srcH: number): number {
