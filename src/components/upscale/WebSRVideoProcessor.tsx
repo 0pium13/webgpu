@@ -15,12 +15,37 @@ function fmtBytes(b: number) {
   return `${Math.round(b / 1e3)} KB`;
 }
 
-async function seekTo(video: HTMLVideoElement, t: number) {
+// importExternalTexture requires the video to have a GPU "back resource".
+// That only exists after at least one frame has been decoded via the GPU pipeline,
+// which means the video must be played (not just seeked). We play briefly, wait
+// for requestVideoFrameCallback (which fires only when the GPU texture is ready),
+// then pause. After this, importExternalTexture works reliably.
+async function primeVideoFrame(video: HTMLVideoElement): Promise<void> {
+  return new Promise<void>((resolve) => {
+    const done = () => { video.pause(); resolve(); };
+    if ((video as any).requestVideoFrameCallback) {
+      (video as any).requestVideoFrameCallback(done);
+      video.play().catch(resolve);
+    } else {
+      // Fallback: just play for two frames worth of time
+      video.play().then(() => setTimeout(done, 66)).catch(resolve);
+    }
+  });
+}
+
+// For frame-by-frame seeks, use requestVideoFrameCallback instead of seeked —
+// it fires when the frame is actually GPU-ready, not just CPU-decoded.
+async function seekToFrame(video: HTMLVideoElement, t: number) {
   if (Math.abs(video.currentTime - t) < 0.002) return;
-  await new Promise<void>((r) => {
-    const h = () => { video.removeEventListener("seeked", h); r(); };
-    video.addEventListener("seeked", h);
-    video.currentTime = t;
+  await new Promise<void>((resolve) => {
+    if ((video as any).requestVideoFrameCallback) {
+      (video as any).requestVideoFrameCallback(() => resolve());
+      video.currentTime = t;
+    } else {
+      const h = () => { video.removeEventListener("seeked", h); resolve(); };
+      video.addEventListener("seeked", h);
+      video.currentTime = t;
+    }
   });
 }
 
@@ -105,14 +130,14 @@ export default function WebSRVideoProcessor({
         createUpscaler(canvas1, "m", content),
         createUpscaler(canvas, "m", content),
       ]);
-      // Prime both passes with frame 0 so canvases get sized
-      await seekTo(video, 0);
+      // Play briefly so the GPU pipeline allocates a back resource for the frame
+      await primeVideoFrame(video);
       await ws1.render(video);    // video → canvas1 (2x)
       await ws2.render(canvas1);  // canvas1 → canvas (4x)
       return { ws1, ws2 };
     } else {
       const ws1 = await createUpscaler(canvas, "m", content);
-      await seekTo(video, 0);
+      await primeVideoFrame(video);
       await ws1.render(video);
       return { ws1, ws2: null };
     }
@@ -264,7 +289,7 @@ export default function WebSRVideoProcessor({
       for (let i = 0; i < totalFrames; i++) {
         if (abortRef.current || encoderErr) break;
 
-        await seekTo(video, i / fps);
+        await seekToFrame(video, i / fps);
         await renderPasses(ws1, ws2, video, canvas1);
 
         const ts = Math.round((i / fps) * 1_000_000); // microseconds
@@ -416,8 +441,8 @@ export default function WebSRVideoProcessor({
         overflow: "hidden", aspectRatio: "16/9",
         display: "flex", alignItems: "center", justifyContent: "center",
       }}>
-        {/* Always-mounted hidden elements */}
-        <video ref={videoRef} style={{ display: "none" }} />
+        {/* Hidden but rendered — display:none prevents GPU back resource allocation */}
+        <video ref={videoRef} muted playsInline style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 1, height: 1 }} />
         <canvas ref={canvas1Ref} style={{ display: "none" }} />
 
         {phase === "done" && outUrl ? (
