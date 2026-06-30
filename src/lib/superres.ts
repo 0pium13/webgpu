@@ -16,9 +16,17 @@
 const MODEL_X4 = "Xenova/swin2SR-realworld-sr-x4-64-bsrgan-psnr";
 const NATIVE_SCALE = 4;
 
+// Per-tile timing breakdown so callers (and us, diagnostically) can see where
+// the time is actually going: readback (canvas draw + getImageData, a
+// GPU->CPU sync point), inference (the awaited pipe() call — this blocks
+// until the GPU finishes, so its wall-clock time is a faithful proxy for
+// real model compute even without raw WebGPU timestamp-query access), and
+// stitch (compositing the tile's output back into the full-res canvas).
+export type TileTiming = { readbackMs: number; inferenceMs: number; stitchMs: number };
+
 export type SRProgress =
   | { phase: "download"; pct: number }
-  | { phase: "tile"; done: number; total: number };
+  | { phase: "tile"; done: number; total: number; timing: TileTiming };
 
 let pipePromise: Promise<any> | null = null;
 let usedDevice: "webgpu" | "wasm" = "webgpu";
@@ -139,8 +147,11 @@ export async function upscaleToCanvas(
       const ew = Math.min(srcW, cx + cw + OVER) - ex;
       const eh = Math.min(srcH, cy + ch + OVER) - ey;
 
+      const t0 = performance.now();
       const raw = await rawFromRegion(source as any, ex, ey, ew, eh);
-      const out = await pipe(raw); // RawImage at ew*4 × eh*4
+      const t1 = performance.now();
+      const out = await pipe(raw); // RawImage at ew*4 × eh*4 — awaited, so this IS the GPU compute time
+      const t2 = performance.now();
       const outImg: any = Array.isArray(out) ? out[0] : out;
 
       // place only the CORE of this tile into the ×4 canvas (crop the overlap)
@@ -159,9 +170,13 @@ export async function upscaleToCanvas(
         cropL, cropT, cropW, cropH,
         cx * NATIVE_SCALE, cy * NATIVE_SCALE, cropW, cropH
       );
+      const t3 = performance.now();
 
       done++;
-      onProgress?.({ phase: "tile", done, total });
+      onProgress?.({
+        phase: "tile", done, total,
+        timing: { readbackMs: t1 - t0, inferenceMs: t2 - t1, stitchMs: t3 - t2 },
+      });
       // yield so the UI paints and the GPU queue drains
       await new Promise((r) => setTimeout(r, 0));
     }
