@@ -5,9 +5,11 @@ import type { UpscaleFile, UpscaleScale } from "@/app/upscale/page";
 import CompareSlider from "./CompareSlider";
 import { createUpscaler, type Content } from "@/lib/websr";
 import { formatDuration } from "@/lib/useGPU";
-import { getFFmpeg } from "@/lib/ffmpeg";
+import { getFFmpeg, setFFmpegCallbacks } from "@/lib/ffmpeg";
+import { upscaleToCanvas, loadSR } from "@/lib/superres";
 
 type Phase = "idle" | "init" | "processing" | "transcoding" | "done" | "error";
+type Engine = "anime4k" | "swin2sr";
 
 function fmtBytes(b: number) {
   if (b > 1e9) return `${(b / 1e9).toFixed(1)} GB`;
@@ -27,7 +29,6 @@ async function primeVideoFrame(video: HTMLVideoElement): Promise<void> {
       (video as any).requestVideoFrameCallback(done);
       video.play().catch(resolve);
     } else {
-      // Fallback: just play for two frames worth of time
       video.play().then(() => setTimeout(done, 66)).catch(resolve);
     }
   });
@@ -51,7 +52,6 @@ async function seekToFrame(video: HTMLVideoElement, t: number) {
 
 async function findH264Codec(w: number, h: number, fps: number): Promise<string | null> {
   if (!("VideoEncoder" in window)) return null;
-  // Try from highest level down; higher levels support larger resolutions
   const candidates = ["64003E", "64003C", "640034", "640033", "64002A", "640028", "4D401E"];
   for (const l of candidates) {
     try {
@@ -61,11 +61,41 @@ async function findH264Codec(w: number, h: number, fps: number): Promise<string 
         height: h,
         bitrate: 16_000_000,
         framerate: fps,
+        avc: { format: "annexb" },
       });
       if (supported) return `avc1.${l}`;
     } catch {}
   }
   return null;
+}
+
+type Chunk = { data: Uint8Array };
+
+function makeEncoder(
+  codec: string,
+  W: number,
+  H: number,
+  fps: number,
+  onChunk: (c: Chunk) => void,
+  onError: (e: Error) => void
+) {
+  const encoder = new (window as any).VideoEncoder({
+    output: (chunk: any) => {
+      const d = new Uint8Array(chunk.byteLength);
+      chunk.copyTo(d);
+      onChunk({ data: d });
+    },
+    error: onError,
+  });
+  // ffmpeg's raw "-f h264" demuxer expects Annex-B (start-code prefixed) NAL
+  // units. VideoEncoder defaults to AVCC (length-prefixed), which ffmpeg's
+  // raw demuxer can't parse — it silently produces no output. Request
+  // annexb explicitly so the muxed file actually gets written.
+  encoder.configure({
+    codec, width: W, height: H, bitrate: 14_000_000, framerate: fps,
+    latencyMode: "quality", avc: { format: "annexb" },
+  });
+  return encoder;
 }
 
 const ghostBtn: React.CSSProperties = {
@@ -89,7 +119,7 @@ export default function WebSRVideoProcessor({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);   // final output (2x or 4x)
-  const canvas1Ref = useRef<HTMLCanvasElement>(null);  // intermediate 2x pass (4x only)
+  const canvas1Ref = useRef<HTMLCanvasElement>(null);  // intermediate 2x pass (4x, anime4k only)
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [pct, setPct] = useState(0);
@@ -101,9 +131,13 @@ export default function WebSRVideoProcessor({
   const [outUrl, setOutUrl] = useState<string | null>(null);
   const [outSize, setOutSize] = useState(0);
   const [outExt, setOutExt] = useState<"webm" | "mp4">("webm");
-  const [speed, setSpeed] = useState(0); // x-times faster than realtime (fast mode)
+  const [speed, setSpeed] = useState(0); // x-times faster than realtime (anime4k fast mode)
   const startRef = useRef(0);
   const abortRef = useRef(false);
+
+  // Real footage gets the real photo-detail engine (Swin2SR). Anime/cartoon keeps
+  // Anime4K, which is purpose-built for line art and fast enough to run live.
+  const engine: Engine = content === "rl" ? "swin2sr" : "anime4k";
 
   useEffect(() => { setHasVE("VideoEncoder" in window); }, []);
 
@@ -118,7 +152,7 @@ export default function WebSRVideoProcessor({
   const outW = meta ? meta.w * mul : null;
   const outH = meta ? meta.h * mul : null;
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
+  // ── Anime4K helpers (WebSR) ─────────────────────────────────────────────────
 
   async function loadWebSR(video: HTMLVideoElement) {
     const canvas = canvasRef.current!;
@@ -130,11 +164,9 @@ export default function WebSRVideoProcessor({
         createUpscaler(canvas1, "m", content),
         createUpscaler(canvas, "m", content),
       ]);
-      // Play briefly so the GPU pipeline allocates a back resource for the frame
       await primeVideoFrame(video);
       await ws1.render(video);
       // WebSR render() only accepts HTMLVideoElement or VideoFrame (uses importExternalTexture).
-      // A raw HTMLCanvasElement would silently fail. Wrap canvas1 in VideoFrame for pass 2.
       const primeVF = new (window as any).VideoFrame(canvas1, { timestamp: 0 });
       await ws2.render(primeVF);
       primeVF.close();
@@ -147,15 +179,9 @@ export default function WebSRVideoProcessor({
     }
   }
 
-  async function renderPasses(
-    ws1: any,
-    ws2: any,
-    src: HTMLVideoElement,
-    canvas1: HTMLCanvasElement
-  ) {
+  async function renderAnime4K(ws1: any, ws2: any, src: HTMLVideoElement, canvas1: HTMLCanvasElement) {
     if (ws2) {
       await ws1.render(src);
-      // WebSR only accepts HTMLVideoElement/VideoFrame — canvas must be wrapped
       const vf = new (window as any).VideoFrame(canvas1, { timestamp: 0 });
       await ws2.render(vf);
       vf.close();
@@ -164,7 +190,49 @@ export default function WebSRVideoProcessor({
     }
   }
 
-  // ── Realtime pipeline (captureStream + MediaRecorder → WebM) ──────────────
+  // ── Shared: mux raw H.264 + source audio → MP4 via ffmpeg ──────────────────
+
+  async function muxToMp4(chunks: Chunk[], fps: number): Promise<Blob> {
+    setPhase("transcoding"); setMsg("Loading ffmpeg…"); setPct(0);
+    const ff = await getFFmpeg();
+    // Captured so a mux failure can report ffmpeg's actual stderr instead of
+    // an opaque "FS error" on the readFile that follows a failed exec.
+    const ffLog: string[] = [];
+    setFFmpegCallbacks((m) => { ffLog.push(m); }, null);
+
+    const totalBytes = chunks.reduce((s, c) => s + c.data.byteLength, 0);
+    const h264Bytes = new Uint8Array(totalBytes);
+    let off = 0;
+    for (const c of chunks) { h264Bytes.set(c.data, off); off += c.data.byteLength; }
+    await ff.writeFile("video.h264", h264Bytes);
+
+    // exec() returns an exit code rather than throwing, so a missing/failed
+    // audio track must be checked explicitly — not assumed from a thrown error.
+    let hasAudio = false;
+    try {
+      const srcBytes = new Uint8Array(await input.file.arrayBuffer());
+      await ff.writeFile("source", srcBytes);
+      const audioRet = await ff.exec(["-i", "source", "-vn", "-c:a", "aac", "-b:a", "192k", "-y", "audio.aac"]);
+      hasAudio = audioRet === 0;
+    } catch { hasAudio = false; }
+
+    setMsg("Muxing to MP4…");
+    const muxArgs = hasAudio
+      ? ["-f", "h264", "-framerate", String(fps), "-i", "video.h264",
+         "-i", "audio.aac", "-c:v", "copy", "-c:a", "copy", "-shortest", "-y", "out.mp4"]
+      : ["-f", "h264", "-framerate", String(fps), "-i", "video.h264",
+         "-c:v", "copy", "-y", "out.mp4"];
+
+    // exec() returns ffmpeg's exit code rather than throwing — a parse/mux
+    // failure otherwise surfaces only as an opaque "FS error" on readFile.
+    const ret = await ff.exec(muxArgs);
+    if (ret !== 0) throw new Error(`ffmpeg mux failed (exit ${ret}): ${ffLog.slice(-5).join(" | ")}`);
+
+    const mp4 = await ff.readFile("out.mp4");
+    return new Blob([mp4 as unknown as BlobPart], { type: "video/mp4" });
+  }
+
+  // ── Realtime pipeline — Anime4K only (captureStream + MediaRecorder → WebM) ─
 
   async function startRealtime() {
     try {
@@ -182,7 +250,6 @@ export default function WebSRVideoProcessor({
 
       const { ws1, ws2 } = await loadWebSR(video);
 
-      // Route audio to MediaRecorder without playing to speakers
       let audioTracks: MediaStreamTrack[] = [];
       try {
         const AC = window.AudioContext ?? (window as any).webkitAudioContext;
@@ -218,7 +285,7 @@ export default function WebSRVideoProcessor({
       const dur = video.duration || 1;
       const tick = async () => {
         if (abortRef.current) { rec.stop(); return; }
-        try { await renderPasses(ws1, ws2, video, canvas1); } catch {}
+        try { await renderAnime4K(ws1, ws2, video, canvas1); } catch {}
         setPct(Math.min(99, Math.round((video.currentTime / dur) * 100)));
         if (!video.ended) (video as any).requestVideoFrameCallback(tick);
       };
@@ -240,7 +307,7 @@ export default function WebSRVideoProcessor({
     }
   }
 
-  // ── Fast pipeline (seek + VideoEncoder → H.264 → ffmpeg mux → MP4) ────────
+  // ── Fast pipeline — Anime4K, seek + VideoEncoder → MP4 ─────────────────────
 
   async function startFast() {
     try {
@@ -269,26 +336,9 @@ export default function WebSRVideoProcessor({
       const codec = await findH264Codec(W, H, fps);
       if (!codec) throw new Error("H.264 encoder not supported — use Real-time mode instead");
 
-      type EncodedChunk = { data: Uint8Array; ts: number };
-      const encodedChunks: EncodedChunk[] = [];
+      const encodedChunks: Chunk[] = [];
       let encoderErr: Error | null = null;
-
-      const encoder = new (window as any).VideoEncoder({
-        output: (chunk: any) => {
-          const d = new Uint8Array(chunk.byteLength);
-          chunk.copyTo(d);
-          encodedChunks.push({ data: d, ts: chunk.timestamp });
-        },
-        error: (e: Error) => { encoderErr = e; },
-      });
-      encoder.configure({
-        codec,
-        width: W,
-        height: H,
-        bitrate: 14_000_000,
-        framerate: fps,
-        latencyMode: "quality",
-      });
+      const encoder = makeEncoder(codec, W, H, fps, (c) => encodedChunks.push(c), (e) => { encoderErr = e; });
 
       setPhase("processing"); setMsg("Rendering frames on GPU…");
       startRef.current = Date.now();
@@ -297,9 +347,9 @@ export default function WebSRVideoProcessor({
         if (abortRef.current || encoderErr) break;
 
         await seekToFrame(video, i / fps);
-        await renderPasses(ws1, ws2, video, canvas1);
+        await renderAnime4K(ws1, ws2, video, canvas1);
 
-        const ts = Math.round((i / fps) * 1_000_000); // microseconds
+        const ts = Math.round((i / fps) * 1_000_000);
         const frame = new (window as any).VideoFrame(canvas, { timestamp: ts });
         encoder.encode(frame, { keyFrame: i % 60 === 0 });
         frame.close();
@@ -308,7 +358,6 @@ export default function WebSRVideoProcessor({
         setPct(Math.min(99, Math.round((i / totalFrames) * 100)));
         if (i > 5 && elapsed > 0) setSpeed((i / fps) / elapsed);
 
-        // Backpressure: yield if encoder queue fills up
         while (encoder.encodeQueueSize > 10) {
           await new Promise((r) => setTimeout(r, 5));
         }
@@ -318,44 +367,7 @@ export default function WebSRVideoProcessor({
       await encoder.flush();
       encoder.close();
 
-      // Mux encoded H.264 + audio → MP4 via ffmpeg
-      setPhase("transcoding"); setMsg("Loading ffmpeg…"); setPct(0);
-      const ff = await getFFmpeg();
-
-      // Concat all H.264 NAL units into one blob
-      const totalBytes = encodedChunks.reduce((s, c) => s + c.data.byteLength, 0);
-      const h264Bytes = new Uint8Array(totalBytes);
-      let off = 0;
-      for (const c of encodedChunks) { h264Bytes.set(c.data, off); off += c.data.byteLength; }
-      await ff.writeFile("video.h264", h264Bytes);
-
-      // Extract audio from original file (best-effort)
-      let hasAudio = false;
-      try {
-        const srcBytes = new Uint8Array(await input.file.arrayBuffer());
-        await ff.writeFile("source", srcBytes);
-        await ff.exec(["-i", "source", "-vn", "-c:a", "aac", "-b:a", "192k", "-y", "audio.aac"]);
-        hasAudio = true;
-      } catch { hasAudio = false; }
-
-      setMsg("Muxing to MP4…");
-      if (hasAudio) {
-        await ff.exec([
-          "-f", "h264", "-framerate", String(fps), "-i", "video.h264",
-          "-i", "audio.aac",
-          "-c:v", "copy", "-c:a", "copy", "-shortest",
-          "-y", "out.mp4",
-        ]);
-      } else {
-        await ff.exec([
-          "-f", "h264", "-framerate", String(fps), "-i", "video.h264",
-          "-c:v", "copy",
-          "-y", "out.mp4",
-        ]);
-      }
-
-      const mp4 = await ff.readFile("out.mp4");
-      const blob = new Blob([mp4 as unknown as BlobPart], { type: "video/mp4" });
+      const blob = await muxToMp4(encodedChunks, fps);
       setOutUrl(URL.createObjectURL(blob));
       setOutSize(blob.size);
       setOutExt("mp4");
@@ -369,7 +381,94 @@ export default function WebSRVideoProcessor({
     }
   }
 
-  function start() { fastMode ? startFast() : startRealtime(); }
+  // ── Quality pipeline — Swin2SR, seek + per-frame reconstruct → MP4 ─────────
+  // No realtime option here: the model is a full transformer running tiled
+  // inference per frame, which cannot keep up with playback speed. This is
+  // the tradeoff for genuinely reconstructed detail on real footage instead
+  // of Anime4K's lightweight (and anime-tuned) upsampling.
+
+  async function startQuality() {
+    try {
+      setPhase("init"); setMsg("Loading AI model…"); setPct(0); setSpeed(0);
+      abortRef.current = false;
+
+      const video = videoRef.current!;
+      const canvas = canvasRef.current!;
+      const fps = 30;
+
+      video.src = input.url;
+      video.muted = true;
+      video.playsInline = true;
+      await new Promise<void>((r) => { video.onloadeddata = () => r(); });
+      await primeVideoFrame(video);
+
+      canvas.width = video.videoWidth * mul;
+      canvas.height = video.videoHeight * mul;
+      const ctx = canvas.getContext("2d")!;
+
+      await loadSR((p) => {
+        if (p.phase === "download") setMsg(`Loading AI model… ${p.pct}%`);
+      });
+
+      const W = canvas.width;
+      const H = canvas.height;
+      const duration = video.duration || 1;
+      const totalFrames = Math.ceil(duration * fps);
+
+      setMsg("Checking GPU encoder…");
+      const codec = await findH264Codec(W, H, fps);
+      if (!codec) throw new Error("H.264 encoder not supported in this browser");
+
+      const encodedChunks: Chunk[] = [];
+      let encoderErr: Error | null = null;
+      const encoder = makeEncoder(codec, W, H, fps, (c) => encodedChunks.push(c), (e) => { encoderErr = e; });
+
+      setPhase("processing"); setMsg("Reconstructing detail on your GPU…");
+      startRef.current = Date.now();
+
+      for (let i = 0; i < totalFrames; i++) {
+        if (abortRef.current || encoderErr) break;
+
+        await seekToFrame(video, i / fps);
+        const out = await upscaleToCanvas(video, mul as 2 | 4);
+        ctx.drawImage(out, 0, 0);
+
+        const ts = Math.round((i / fps) * 1_000_000);
+        const frame = new (window as any).VideoFrame(canvas, { timestamp: ts });
+        encoder.encode(frame, { keyFrame: i % 60 === 0 });
+        frame.close();
+
+        const elapsed = (Date.now() - startRef.current) / 1000;
+        setPct(Math.min(99, Math.round((i / totalFrames) * 100)));
+        setSpeed(elapsed / Math.max(1, i + 1)); // seconds per frame
+
+        while (encoder.encodeQueueSize > 10) {
+          await new Promise((r) => setTimeout(r, 5));
+        }
+      }
+
+      if (encoderErr) throw encoderErr;
+      await encoder.flush();
+      encoder.close();
+
+      const blob = await muxToMp4(encodedChunks, fps);
+      setOutUrl(URL.createObjectURL(blob));
+      setOutSize(blob.size);
+      setOutExt("mp4");
+      setPct(100);
+      setPhase("done");
+      setMsg(`Done — ${fmtBytes(blob.size)}`);
+    } catch (e: any) {
+      console.error(e);
+      setMsg(e?.message ?? "Something went wrong");
+      setPhase("error");
+    }
+  }
+
+  function start() {
+    if (engine === "swin2sr") return startQuality();
+    return fastMode ? startFast() : startRealtime();
+  }
 
   function download() {
     if (!outUrl) return;
@@ -400,8 +499,8 @@ export default function WebSRVideoProcessor({
       {/* Pre-start controls */}
       {phase === "idle" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {/* Content type */}
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {/* Content type — this picks the engine */}
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <span style={{ fontSize: 13, color: "var(--text-muted)", minWidth: 60 }}>Content:</span>
             {([["rl", "Real life / film"], ["an", "Anime / cartoon"]] as [Content, string][]).map(([v, label]) => (
               <button key={v} onClick={() => setContent(v)}
@@ -414,10 +513,16 @@ export default function WebSRVideoProcessor({
                 {label}
               </button>
             ))}
+            <span className="mono" style={{
+              fontSize: 11, color: "var(--text-dim)", padding: "4px 10px",
+              border: "0.5px solid var(--border)", borderRadius: 20,
+            }}>
+              engine: {engine === "swin2sr" ? "Swin2SR (quality)" : "Anime4K (fast)"}
+            </span>
           </div>
 
-          {/* Mode picker — only when VideoEncoder is available */}
-          {hasVE && (
+          {/* Mode picker — only meaningful for the Anime4K engine; Swin2SR has no realtime path */}
+          {hasVE && engine === "anime4k" && (
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <span style={{ fontSize: 13, color: "var(--text-muted)", minWidth: 60 }}>Mode:</span>
               {([
@@ -437,6 +542,12 @@ export default function WebSRVideoProcessor({
                 </button>
               ))}
             </div>
+          )}
+
+          {engine === "swin2sr" && (
+            <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
+              Real detail reconstruction, not interpolation — processes frame-by-frame and is much slower than real-time. Best for shorter clips.
+            </p>
           )}
         </div>
       )}
@@ -490,7 +601,9 @@ export default function WebSRVideoProcessor({
                   ⚡ Upscale {scale} with AI
                 </button>
                 <p className="mono" style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
-                  Anime4K CNN · {fastMode ? "GPU-encoded MP4" : "real-time WebM"} · runs on your GPU
+                  {engine === "swin2sr"
+                    ? "Swin2SR transformer · reconstructs real detail · runs on your GPU"
+                    : `Anime4K CNN · ${fastMode ? "GPU-encoded MP4" : "real-time WebM"} · runs on your GPU`}
                 </p>
               </div>
             )}
@@ -526,14 +639,16 @@ export default function WebSRVideoProcessor({
                   background: "var(--accent)", animation: "pulse 1s ease-in-out infinite", flexShrink: 0,
                 }} />
                 <span style={{ fontSize: 13, color: "#fff", flex: 1 }}>
-                  {fastMode ? "Frame-by-frame…" : "Upscaling…"} {pct}%
+                  {engine === "swin2sr" ? "Reconstructing detail…" : "Upscaling…"} {pct}%
                 </span>
                 <span className="mono" style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
-                  {fastMode && speed > 0
-                    ? `${speed.toFixed(1)}× realtime`
-                    : !fastMode && pct > 2
-                      ? `~${formatDuration((elapsed / pct) * (100 - pct))} left`
-                      : ""}
+                  {engine === "swin2sr"
+                    ? (speed > 0 ? `${speed.toFixed(1)}s/frame` : "")
+                    : fastMode && speed > 0
+                      ? `${speed.toFixed(1)}× realtime`
+                      : !fastMode && pct > 2
+                        ? `~${formatDuration((elapsed / pct) * (100 - pct))} left`
+                        : ""}
                 </span>
               </div>
             )}
@@ -595,9 +710,11 @@ export default function WebSRVideoProcessor({
       {/* Footer note */}
       {phase === "idle" && (
         <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
-          {fastMode
-            ? `Fast mode: seeks each frame, GPU-encodes H.264, muxes to MP4 via ffmpeg. ${scale === "4x" ? "Two-pass 4× AI upscale. " : ""}Audio preserved from original.`
-            : `Real-time: Anime4K CNN upscale. ${scale === "4x" ? "Two-pass 4× — doubles twice through the neural net. " : ""}Processes at video playback speed.`}
+          {engine === "swin2sr"
+            ? `Real AI reconstruction (Swin2SR) on your GPU — rebuilds texture and removes compression artifacts instead of just resizing. ${scale === "4x" ? "Native 4× model. " : "Runs 4× then downsamples 2×, which also denoises. "}Audio preserved from original.`
+            : fastMode
+              ? `Fast mode: seeks each frame, GPU-encodes H.264, muxes to MP4 via ffmpeg. ${scale === "4x" ? "Two-pass 4× AI upscale. " : ""}Audio preserved from original.`
+              : `Real-time: Anime4K CNN upscale. ${scale === "4x" ? "Two-pass 4× — doubles twice through the neural net. " : ""}Processes at video playback speed.`}
         </p>
       )}
     </div>
