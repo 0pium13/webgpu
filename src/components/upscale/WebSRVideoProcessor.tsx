@@ -69,10 +69,42 @@ async function findH264Codec(w: number, h: number, fps: number): Promise<string 
   return null;
 }
 
+// Real browser H.264 encoders cap out well below the codec spec's resolution
+// ceiling — e.g. Chrome on most machines only supports H.264 encode up to
+// 1080p, so any 2x/4x upscale of a typical 1080p source already exceeds it.
+// VP9 has no such practical ceiling (works up to 8K+), so it's the fallback
+// for any output the H.264 encoder rejects.
+async function findVP9Codec(w: number, h: number, fps: number): Promise<string | null> {
+  if (!("VideoEncoder" in window)) return null;
+  const candidates = ["vp09.00.10.08", "vp09.00.50.08", "vp8"];
+  for (const c of candidates) {
+    try {
+      const { supported } = await (window as any).VideoEncoder.isConfigSupported({
+        codec: c, width: w, height: h, bitrate: 16_000_000, framerate: fps,
+      });
+      if (supported) return c;
+    } catch {}
+  }
+  return null;
+}
+
+type Container = "mp4" | "webm";
+
+async function pickVideoCodec(
+  w: number, h: number, fps: number
+): Promise<{ codec: string; container: Container } | null> {
+  const h264 = await findH264Codec(w, h, fps);
+  if (h264) return { codec: h264, container: "mp4" };
+  const vp9 = await findVP9Codec(w, h, fps);
+  if (vp9) return { codec: vp9, container: "webm" };
+  return null;
+}
+
 type Chunk = { data: Uint8Array };
 
 function makeEncoder(
   codec: string,
+  container: Container,
   W: number,
   H: number,
   fps: number,
@@ -87,15 +119,52 @@ function makeEncoder(
     },
     error: onError,
   });
+  const config: any = {
+    codec, width: W, height: H, bitrate: 14_000_000, framerate: fps, latencyMode: "quality",
+  };
   // ffmpeg's raw "-f h264" demuxer expects Annex-B (start-code prefixed) NAL
   // units. VideoEncoder defaults to AVCC (length-prefixed), which ffmpeg's
   // raw demuxer can't parse — it silently produces no output. Request
-  // annexb explicitly so the muxed file actually gets written.
-  encoder.configure({
-    codec, width: W, height: H, bitrate: 14_000_000, framerate: fps,
-    latencyMode: "quality", avc: { format: "annexb" },
-  });
+  // annexb explicitly so the muxed file actually gets written. (VP9 has no
+  // equivalent bitstream-format option — it's framed via the IVF container.)
+  if (container === "mp4") config.avc = { format: "annexb" };
+  encoder.configure(config);
   return encoder;
+}
+
+// Minimal IVF container so ffmpeg can demux a raw VP9 elementary stream.
+// VP9 frames have no self-delimiting start codes the way Annex-B H.264 does,
+// so they need an explicit per-frame size/timestamp header to be readable.
+function buildIVF(frames: Uint8Array[], width: number, height: number, fps: number): Uint8Array {
+  const HEADER = 32;
+  const FRAME_HEADER = 12;
+  let total = HEADER;
+  for (const f of frames) total += FRAME_HEADER + f.byteLength;
+
+  const buf = new ArrayBuffer(total);
+  const view = new DataView(buf);
+  const bytes = new Uint8Array(buf);
+
+  bytes.set([0x44, 0x4b, 0x49, 0x46], 0); // "DKIF"
+  view.setUint16(4, 0, true);             // version
+  view.setUint16(6, HEADER, true);        // header length
+  bytes.set([0x56, 0x50, 0x39, 0x30], 8); // "VP90" fourcc
+  view.setUint16(12, width, true);
+  view.setUint16(14, height, true);
+  view.setUint32(16, fps, true);          // framerate numerator
+  view.setUint32(20, 1, true);            // framerate denominator
+  view.setUint32(24, frames.length, true);
+  view.setUint32(28, 0, true);
+
+  let offset = HEADER;
+  frames.forEach((f, i) => {
+    view.setUint32(offset, f.byteLength, true);
+    view.setUint32(offset + 4, i, true);  // timestamp low 32 bits = frame index
+    view.setUint32(offset + 8, 0, true);  // timestamp high 32 bits
+    bytes.set(f, offset + FRAME_HEADER);
+    offset += FRAME_HEADER + f.byteLength;
+  });
+  return bytes;
 }
 
 const ghostBtn: React.CSSProperties = {
@@ -190,7 +259,20 @@ export default function WebSRVideoProcessor({
     }
   }
 
-  // ── Shared: mux raw H.264 + source audio → MP4 via ffmpeg ──────────────────
+  // ── Shared: mux encoded video + source audio via ffmpeg ────────────────────
+
+  async function extractAudio(ff: any): Promise<boolean> {
+    // exec() returns an exit code rather than throwing, so a missing/failed
+    // audio track must be checked explicitly — not assumed from a thrown error.
+    try {
+      const srcBytes = new Uint8Array(await input.file.arrayBuffer());
+      await ff.writeFile("source", srcBytes);
+      const ret = await ff.exec(["-i", "source", "-vn", "-c:a", "aac", "-b:a", "192k", "-y", "audio.aac"]);
+      return ret === 0;
+    } catch {
+      return false;
+    }
+  }
 
   async function muxToMp4(chunks: Chunk[], fps: number): Promise<Blob> {
     setPhase("transcoding"); setMsg("Loading ffmpeg…"); setPct(0);
@@ -206,15 +288,7 @@ export default function WebSRVideoProcessor({
     for (const c of chunks) { h264Bytes.set(c.data, off); off += c.data.byteLength; }
     await ff.writeFile("video.h264", h264Bytes);
 
-    // exec() returns an exit code rather than throwing, so a missing/failed
-    // audio track must be checked explicitly — not assumed from a thrown error.
-    let hasAudio = false;
-    try {
-      const srcBytes = new Uint8Array(await input.file.arrayBuffer());
-      await ff.writeFile("source", srcBytes);
-      const audioRet = await ff.exec(["-i", "source", "-vn", "-c:a", "aac", "-b:a", "192k", "-y", "audio.aac"]);
-      hasAudio = audioRet === 0;
-    } catch { hasAudio = false; }
+    const hasAudio = await extractAudio(ff);
 
     setMsg("Muxing to MP4…");
     const muxArgs = hasAudio
@@ -230,6 +304,32 @@ export default function WebSRVideoProcessor({
 
     const mp4 = await ff.readFile("out.mp4");
     return new Blob([mp4 as unknown as BlobPart], { type: "video/mp4" });
+  }
+
+  // VP9 fallback path: build a minimal IVF wrapper around the raw frames so
+  // ffmpeg can demux them, then remux to WebM alongside the source audio.
+  async function muxToWebm(chunks: Chunk[], W: number, H: number, fps: number): Promise<Blob> {
+    setPhase("transcoding"); setMsg("Loading ffmpeg…"); setPct(0);
+    const ff = await getFFmpeg();
+    const ffLog: string[] = [];
+    setFFmpegCallbacks((m) => { ffLog.push(m); }, null);
+
+    const ivf = buildIVF(chunks.map((c) => c.data), W, H, fps);
+    await ff.writeFile("video.ivf", ivf);
+
+    const hasAudio = await extractAudio(ff);
+
+    setMsg("Muxing to WebM…");
+    const muxArgs = hasAudio
+      ? ["-f", "ivf", "-i", "video.ivf", "-i", "audio.aac",
+         "-c:v", "copy", "-c:a", "copy", "-shortest", "-y", "out.webm"]
+      : ["-f", "ivf", "-i", "video.ivf", "-c:v", "copy", "-y", "out.webm"];
+
+    const ret = await ff.exec(muxArgs);
+    if (ret !== 0) throw new Error(`ffmpeg mux failed (exit ${ret}): ${ffLog.slice(-5).join(" | ")}`);
+
+    const webm = await ff.readFile("out.webm");
+    return new Blob([webm as unknown as BlobPart], { type: "video/webm" });
   }
 
   // ── Realtime pipeline — Anime4K only (captureStream + MediaRecorder → WebM) ─
@@ -333,12 +433,13 @@ export default function WebSRVideoProcessor({
       const totalFrames = Math.ceil(duration * fps);
 
       setMsg("Checking GPU encoder…");
-      const codec = await findH264Codec(W, H, fps);
-      if (!codec) throw new Error("H.264 encoder not supported — use Real-time mode instead");
+      const picked = await pickVideoCodec(W, H, fps);
+      if (!picked) throw new Error(`Your browser can't encode video at ${W}×${H} — try a lower scale, or use Real-time mode.`);
+      const { codec, container } = picked;
 
       const encodedChunks: Chunk[] = [];
       let encoderErr: Error | null = null;
-      const encoder = makeEncoder(codec, W, H, fps, (c) => encodedChunks.push(c), (e) => { encoderErr = e; });
+      const encoder = makeEncoder(codec, container, W, H, fps, (c) => encodedChunks.push(c), (e) => { encoderErr = e; });
 
       setPhase("processing"); setMsg("Rendering frames on GPU…");
       startRef.current = Date.now();
@@ -367,10 +468,12 @@ export default function WebSRVideoProcessor({
       await encoder.flush();
       encoder.close();
 
-      const blob = await muxToMp4(encodedChunks, fps);
+      const blob = container === "mp4"
+        ? await muxToMp4(encodedChunks, fps)
+        : await muxToWebm(encodedChunks, W, H, fps);
       setOutUrl(URL.createObjectURL(blob));
       setOutSize(blob.size);
-      setOutExt("mp4");
+      setOutExt(container);
       setPct(100);
       setPhase("done");
       setMsg(`Done — ${fmtBytes(blob.size)}`);
@@ -416,12 +519,13 @@ export default function WebSRVideoProcessor({
       const totalFrames = Math.ceil(duration * fps);
 
       setMsg("Checking GPU encoder…");
-      const codec = await findH264Codec(W, H, fps);
-      if (!codec) throw new Error("H.264 encoder not supported in this browser");
+      const picked = await pickVideoCodec(W, H, fps);
+      if (!picked) throw new Error(`Your browser can't encode video at ${W}×${H} — try a lower scale or a smaller source video.`);
+      const { codec, container } = picked;
 
       const encodedChunks: Chunk[] = [];
       let encoderErr: Error | null = null;
-      const encoder = makeEncoder(codec, W, H, fps, (c) => encodedChunks.push(c), (e) => { encoderErr = e; });
+      const encoder = makeEncoder(codec, container, W, H, fps, (c) => encodedChunks.push(c), (e) => { encoderErr = e; });
 
       setPhase("processing"); setMsg("Reconstructing detail on your GPU…");
       startRef.current = Date.now();
@@ -451,10 +555,12 @@ export default function WebSRVideoProcessor({
       await encoder.flush();
       encoder.close();
 
-      const blob = await muxToMp4(encodedChunks, fps);
+      const blob = container === "mp4"
+        ? await muxToMp4(encodedChunks, fps)
+        : await muxToWebm(encodedChunks, W, H, fps);
       setOutUrl(URL.createObjectURL(blob));
       setOutSize(blob.size);
-      setOutExt("mp4");
+      setOutExt(container);
       setPct(100);
       setPhase("done");
       setMsg(`Done — ${fmtBytes(blob.size)}`);
