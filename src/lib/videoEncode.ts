@@ -144,11 +144,16 @@ export async function encodeFramesToVideo(opts: EncodeOptions): Promise<EncodeRe
   const ffLog: string[] = [];
   setFFmpegCallbacks((m) => { ffLog.push(m); }, null);
 
+  // WebM (matroska muxer) only accepts Vorbis/Opus audio — AAC in a .webm
+  // container fails the mux outright. MP4 wants AAC. Extract into whichever
+  // codec the target container actually supports.
+  const audioCodec = container === "mp4" ? "aac" : "libvorbis";
+  const audioFile = container === "mp4" ? "audio.aac" : "audio.ogg";
   let hasAudio = false;
   if (audioSource) {
     try {
       await ff.writeFile("src_a", new Uint8Array(await audioSource.arrayBuffer()));
-      hasAudio = (await ff.exec(["-i", "src_a", "-vn", "-c:a", "aac", "-b:a", "192k", "-y", "audio.aac"])) === 0;
+      hasAudio = (await ff.exec(["-i", "src_a", "-vn", "-c:a", audioCodec, "-b:a", "192k", "-y", audioFile])) === 0;
     } catch { hasAudio = false; }
   }
 
@@ -160,13 +165,13 @@ export async function encodeFramesToVideo(opts: EncodeOptions): Promise<EncodeRe
     await ff.writeFile("video.h264", h264);
     outName = "out.mp4";
     muxArgs = hasAudio
-      ? ["-f", "h264", "-framerate", String(fps), "-i", "video.h264", "-i", "audio.aac", "-c:v", "copy", "-c:a", "copy", "-shortest", "-y", outName]
+      ? ["-f", "h264", "-framerate", String(fps), "-i", "video.h264", "-i", audioFile, "-c:v", "copy", "-c:a", "copy", "-shortest", "-y", outName]
       : ["-f", "h264", "-framerate", String(fps), "-i", "video.h264", "-c:v", "copy", "-y", outName];
   } else {
     await ff.writeFile("video.ivf", buildIVF(chunks.map((c) => c.data), width, height, fps));
     outName = "out.webm";
     muxArgs = hasAudio
-      ? ["-f", "ivf", "-i", "video.ivf", "-i", "audio.aac", "-c:v", "copy", "-c:a", "copy", "-shortest", "-y", outName]
+      ? ["-f", "ivf", "-i", "video.ivf", "-i", audioFile, "-c:v", "copy", "-c:a", "copy", "-shortest", "-y", outName]
       : ["-f", "ivf", "-i", "video.ivf", "-c:v", "copy", "-y", outName];
   }
 
