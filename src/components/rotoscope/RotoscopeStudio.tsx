@@ -5,7 +5,7 @@ import type { RotoFile } from "@/app/rotoscope/page";
 import {
   loadSAM, rawImageFromCanvas, embedImage, decodeMask, decodeFromBox,
   type SamSession, type SamPoint, type MaskResult,
-} from "@/lib/sam";
+} from "@/lib/sam2";
 import { loadDetector, detectObjects, type Detection } from "@/lib/detect";
 
 type Status =
