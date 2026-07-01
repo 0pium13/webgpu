@@ -6,7 +6,7 @@ import CompareSlider from "./CompareSlider";
 import { createUpscaler, type Content } from "@/lib/websr";
 import { formatDuration } from "@/lib/useGPU";
 import { getFFmpeg, setFFmpegCallbacks } from "@/lib/ffmpeg";
-import { upscaleToCanvas, loadSR, estimateTiles } from "@/lib/superres";
+import { upscaleToCanvas, loadSR, estimateTiles, type FrameCache } from "@/lib/superres";
 
 type Phase = "idle" | "init" | "processing" | "transcoding" | "done" | "error";
 type Engine = "anime4k" | "swin2sr";
@@ -207,6 +207,7 @@ export default function WebSRVideoProcessor({
   const [outSize, setOutSize] = useState(0);
   const [outExt, setOutExt] = useState<"webm" | "mp4">("webm");
   const [speed, setSpeed] = useState(0); // x-times faster than realtime (anime4k fast mode)
+  const [tileStats, setTileStats] = useState({ done: 0, skipped: 0 }); // swin2sr: reused-vs-reprocessed tiles, for transparency
   const startRef = useRef(0);
   const abortRef = useRef(false);
 
@@ -497,6 +498,7 @@ export default function WebSRVideoProcessor({
   async function startQuality() {
     try {
       setPhase("init"); setMsg("Loading AI model…"); setPct(0); setSpeed(0);
+      setTileStats({ done: 0, skipped: 0 });
       abortRef.current = false;
 
       const video = videoRef.current!;
@@ -538,17 +540,30 @@ export default function WebSRVideoProcessor({
       setPhase("processing"); setMsg("Reconstructing detail on your GPU…");
       startRef.current = Date.now();
 
+      let cache: FrameCache | undefined;
+      let tilesDone = 0;
+      let tilesSkipped = 0;
+
       for (let i = 0; i < totalFrames; i++) {
         if (abortRef.current || encoderErr) break;
 
         await seekToFrame(video, i / fps);
-        const out = await upscaleToCanvas(video, mul as 2 | 4, (p) => {
+        const { canvas: out, cache: nextCache } = await upscaleToCanvas(video, mul as 2 | 4, (p) => {
           if (p.phase === "tile") {
             const frameFraction = p.done / p.total;
-            setPct(Math.min(99, Math.round(((i + frameFraction) / totalFrames) * 100)));
-            setMsg(`Reconstructing detail… frame ${i + 1}/${totalFrames} · tile ${p.done}/${p.total}`);
+            const pctVal = ((i + frameFraction) / totalFrames) * 100;
+            setPct(Math.min(99, Math.round(pctVal * 10) / 10)); // decimal precision, so the bar visibly moves within a frame's tiles
+            if (p.skipped) tilesSkipped++;
+            tilesDone++;
+            setTileStats({ done: tilesDone, skipped: tilesSkipped });
+            setMsg(
+              `Reconstructing detail… frame ${i + 1}/${totalFrames} · tile ${p.done}/${p.total}` +
+              (p.skipped ? " (reused — unchanged)" : "") +
+              ` · ${(p.timing.readbackMs + p.timing.inferenceMs + p.timing.stitchMs).toFixed(0)}ms`
+            );
           }
-        });
+        }, cache);
+        cache = nextCache;
         ctx.drawImage(out, 0, 0);
 
         const ts = Math.round((i / fps) * 1_000_000);
@@ -801,25 +816,33 @@ export default function WebSRVideoProcessor({
             {phase === "processing" && (
               <div style={{
                 position: "absolute", bottom: 14, left: 14, right: 14,
-                display: "flex", alignItems: "center", gap: 10,
+                display: "flex", flexDirection: "column", gap: 6,
                 background: "rgba(10,10,11,0.75)", borderRadius: 10, padding: "10px 14px",
               }}>
-                <span style={{
-                  width: 7, height: 7, borderRadius: "50%",
-                  background: "var(--accent)", animation: "pulse 1s ease-in-out infinite", flexShrink: 0,
-                }} />
-                <span style={{ fontSize: 13, color: "#fff", flex: 1 }}>
-                  {engine === "swin2sr" ? msg : `Upscaling… ${pct}%`}
-                </span>
-                <span className="mono" style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", flexShrink: 0 }}>
-                  {engine === "swin2sr"
-                    ? (pct > 2 ? `~${formatDuration((elapsed / pct) * (100 - pct))} left` : "")
-                    : fastMode && speed > 0
-                      ? `${speed.toFixed(1)}× realtime`
-                      : !fastMode && pct > 2
-                        ? `~${formatDuration((elapsed / pct) * (100 - pct))} left`
-                        : ""}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{
+                    width: 7, height: 7, borderRadius: "50%",
+                    background: "var(--accent)", animation: "pulse 1s ease-in-out infinite", flexShrink: 0,
+                  }} />
+                  <span style={{ fontSize: 13, color: "#fff", flex: 1 }}>
+                    {engine === "swin2sr" ? msg : `Upscaling… ${pct.toFixed(0)}%`}
+                  </span>
+                  <span className="mono" style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", flexShrink: 0 }}>
+                    {engine === "swin2sr"
+                      ? `${pct.toFixed(1)}%${pct > 2 ? ` · ~${formatDuration((elapsed / pct) * (100 - pct))} left` : ""}`
+                      : fastMode && speed > 0
+                        ? `${speed.toFixed(1)}× realtime`
+                        : !fastMode && pct > 2
+                          ? `~${formatDuration((elapsed / pct) * (100 - pct))} left`
+                          : ""}
+                  </span>
+                </div>
+                {engine === "swin2sr" && tileStats.done > 0 && (
+                  <p className="mono" style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", paddingLeft: 17 }}>
+                    {tileStats.done - tileStats.skipped} reconstructed with AI · {tileStats.skipped} reused unchanged from the previous frame
+                    {tileStats.skipped > 0 && ` (${Math.round((tileStats.skipped / tileStats.done) * 100)}% skipped so far)`}
+                  </p>
+                )}
               </div>
             )}
 

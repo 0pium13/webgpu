@@ -84,7 +84,7 @@ export default function ImageProcessor({
         }
       };
 
-      const out = await upscaleToCanvas(imgRef.current, multiplier, onProgress);
+      const { canvas: out } = await upscaleToCanvas(imgRef.current, multiplier, onProgress);
       clearInterval(timer);
 
       const blob: Blob = await new Promise((res) => out.toBlob((b) => res(b!), "image/png"));
