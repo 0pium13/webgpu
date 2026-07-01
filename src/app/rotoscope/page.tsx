@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Nav from "@/components/Nav";
 import RotoscopeStudio from "@/components/rotoscope/RotoscopeStudio";
+import VideoRotoscopeStudio from "@/components/rotoscope/VideoRotoscopeStudio";
 import { useGPU } from "@/lib/useGPU";
 
 export type RotoFile = { file: File; url: string; isVideo: boolean };
@@ -51,7 +52,9 @@ export default function RotoscopePage() {
           </div>
         )}
 
-        {!input ? <Dropzone onFile={handleFile} /> : <RotoscopeStudio input={input} onReset={reset} />}
+        {!input ? <Dropzone onFile={handleFile} />
+          : input.isVideo ? <VideoRotoscopeStudio input={input} onReset={reset} />
+          : <RotoscopeStudio input={input} onReset={reset} />}
       </div>
     </div>
   );
