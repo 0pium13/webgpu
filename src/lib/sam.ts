@@ -83,18 +83,9 @@ export async function embedImage(raw: any): Promise<SamSession> {
   };
 }
 
-/** Fast step: decode a mask from the current set of click points. */
-export async function decodeMask(session: SamSession, points: SamPoint[]): Promise<MaskResult> {
-  const { model, processor, Tensor } = await loadSAM();
-  const [rh, rw] = session.reshaped;
-
-  const coords: number[] = [];
-  for (const p of points) coords.push(p.x * rw, p.y * rh);
-
-  const input_points = new Tensor("float32", coords, [1, 1, points.length, 2]);
-  const input_labels = new Tensor("int64", points.map((p) => BigInt(p.label)), [1, 1, points.length]);
-
-  const outputs = await model({ ...session.embeddings, input_points, input_labels });
+/** Shared: pick the highest-IoU mask from a SAM decoder output and flatten it. */
+async function extractBestMask(session: SamSession, outputs: any): Promise<MaskResult> {
+  const { processor } = await loadSAM();
   const masks = await processor.post_process_masks(
     outputs.pred_masks,
     session.originalSizes,
@@ -117,4 +108,36 @@ export async function decodeMask(session: SamSession, points: SamPoint[]): Promi
   for (let i = 0; i < H * W; i++) out[i] = src[offset + i] ? 255 : 0;
 
   return { data: out, width: W, height: H, score: scores[best] };
+}
+
+/** Fast step: decode a mask from the current set of click points. */
+export async function decodeMask(session: SamSession, points: SamPoint[]): Promise<MaskResult> {
+  const { model, Tensor } = await loadSAM();
+  const [rh, rw] = session.reshaped;
+
+  const coords: number[] = [];
+  for (const p of points) coords.push(p.x * rw, p.y * rh);
+
+  const input_points = new Tensor("float32", coords, [1, 1, points.length, 2]);
+  const input_labels = new Tensor("int64", points.map((p) => BigInt(p.label)), [1, 1, points.length]);
+
+  const outputs = await model({ ...session.embeddings, input_points, input_labels });
+  return extractBestMask(session, outputs);
+}
+
+/**
+ * Decode a mask from a bounding box (normalized 0..1) — the prompt used for
+ * auto-detected objects. A box gives SAM far more context than a single point,
+ * so the resulting matte is cleaner and needs less manual correction.
+ */
+export async function decodeFromBox(
+  session: SamSession,
+  box: { x1: number; y1: number; x2: number; y2: number }
+): Promise<MaskResult> {
+  const { model, Tensor } = await loadSAM();
+  const [rh, rw] = session.reshaped;
+  const coords = [box.x1 * rw, box.y1 * rh, box.x2 * rw, box.y2 * rh];
+  const input_boxes = new Tensor("float32", coords, [1, 1, 4]);
+  const outputs = await model({ ...session.embeddings, input_boxes });
+  return extractBestMask(session, outputs);
 }

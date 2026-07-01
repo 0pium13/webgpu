@@ -33,10 +33,10 @@ export default function RotoscopePage() {
           <h1 style={{ fontSize: "clamp(32px, 5vw, 56px)", fontWeight: 500, letterSpacing: "-0.03em", marginTop: 12, marginBottom: 10 }}>
             AI Rotoscope
           </h1>
-          <p style={{ fontSize: 16, color: "var(--text-muted)", maxWidth: 560, lineHeight: 1.6 }}>
-            Click an object and AI isolates it — powered by Segment Anything
-            running on your GPU. No upload, no account. Phase 1: per-frame
-            selection. Video tracking is next.
+          <p style={{ fontSize: 16, color: "var(--text-muted)", maxWidth: 580, lineHeight: 1.6 }}>
+            AI finds every object in your frame automatically — hover to preview,
+            click to cut out. Powered by object detection + Segment Anything
+            running on your GPU. No upload, no account.
           </p>
         </div>
 
@@ -45,7 +45,7 @@ export default function RotoscopePage() {
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: gpu.supported ? "var(--green)" : "var(--amber)", flexShrink: 0 }} />
             <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
               {gpu.scanning ? "Detecting your GPU…" : (
-                <>Segment Anything runs on <span className="mono" style={{ color: "var(--text)" }}>{gpu.supported ? "your GPU (WebGPU)" : "CPU (WASM)"}</span> · first run downloads a ~40MB model</>
+                <>Detection + Segment Anything run on <span className="mono" style={{ color: "var(--text)" }}>{gpu.supported ? "your GPU (WebGPU)" : "CPU (WASM)"}</span> · first run downloads the models (~200MB, cached after)</>
               )}
             </p>
           </div>
