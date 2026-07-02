@@ -1,5 +1,7 @@
 "use client";
 
+import { useCallback } from "react";
+
 const TOOLS = [
   { href: "/upscale", icon: "⚡", name: "Upscaler", desc: "Real AI detail reconstruction. Up to 4K." },
   { href: "/rotoscope", icon: "🎯", name: "Rotoscope", desc: "Cut out and track any object, even in video." },
@@ -7,37 +9,37 @@ const TOOLS = [
 ];
 
 export default function ToolsGrid() {
+  // feed the cursor position to the CSS spotlight (cheap: two custom props)
+  const track = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    e.currentTarget.style.setProperty("--mx", `${e.clientX - r.left}px`);
+    e.currentTarget.style.setProperty("--my", `${e.clientY - r.top}px`);
+  }, []);
+
   return (
-    <section style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px 100px" }}>
-      <div
-        className="stagger"
-        style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}
-      >
+    <section className="mx-auto max-w-3xl px-6 pb-24">
+      <div className="stagger grid grid-cols-1 gap-3 sm:grid-cols-3">
         {TOOLS.map((t) => (
           <a
             key={t.href}
             href={t.href}
-            style={{
-              display: "block",
-              background: "var(--surface)",
-              border: "0.5px solid var(--border)",
-              borderRadius: 16,
-              padding: "26px 22px",
-              textDecoration: "none",
-              transition: "border-color 0.15s, transform 0.15s",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor = "var(--accent-border)";
-              (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
-              (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
-            }}
+            onMouseMove={track}
+            className="spotlight group block rounded-2xl border border-line bg-surface p-6 no-underline transition-[border-color,transform,box-shadow] duration-300 ease-[var(--ease-lux)] hover:-translate-y-0.5 hover:border-line-strong hover:shadow-[0_12px_40px_-16px_rgba(99,102,241,0.25)] active:translate-y-0 active:scale-[0.99]"
           >
-            <span style={{ fontSize: 26, display: "block", marginBottom: 14 }}>{t.icon}</span>
-            <p style={{ fontSize: 16, fontWeight: 500, color: "var(--text)", marginBottom: 5 }}>{t.name}</p>
-            <p style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5 }}>{t.desc}</p>
+            <span className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl border border-line bg-surface-2 text-[20px] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-transform duration-300 ease-[var(--ease-spring)] group-hover:scale-110">
+              {t.icon}
+            </span>
+
+            <p className="mb-1.5 flex items-center gap-1 text-[15px] font-medium text-fg">
+              {t.name}
+              <span
+                aria-hidden
+                className="translate-x-0 opacity-0 transition-all duration-300 ease-[var(--ease-lux)] group-hover:translate-x-1 group-hover:opacity-100"
+              >
+                →
+              </span>
+            </p>
+            <p className="text-[13px] leading-relaxed text-muted-fg">{t.desc}</p>
           </a>
         ))}
       </div>

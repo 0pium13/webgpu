@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+/* ── design tokens ─────────────────────────────────────────────────────── */
+
 :root {
   --accent: #6366f1;
   --accent-dim: rgba(99, 102, 241, 0.1);
@@ -10,21 +12,45 @@
   --border: rgba(255, 255, 255, 0.07);
   --border-strong: rgba(255, 255, 255, 0.13);
   --text: #f4f4f5;
+  --text-secondary: #a1a1aa;
   --text-muted: #71717a;
   --text-dim: #3f3f46;
   --green: #22c55e;
   --green-dim: rgba(34, 197, 94, 0.1);
   --amber: #f59e0b;
   --amber-dim: rgba(245, 158, 11, 0.1);
+
+  /* Apple-style easing: fast start, long soft landing */
+  --ease-lux: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+/* map tokens into Tailwind v4 utilities (bg-surface, text-muted-fg, …) */
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-fg: var(--text);
+  --color-fg-secondary: var(--text-secondary);
+  --color-muted-fg: var(--text-muted);
+  --color-dim-fg: var(--text-dim);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-geist-sans), "Inter", system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* NOTE: no universal `* { margin:0; padding:0 }` reset here — Tailwind's
+   preflight already does it INSIDE @layer base. An unlayered reset would win
+   the cascade over every padding/margin utility and silently zero them all. */
 
 html {
   background: var(--canvas);
   color: var(--text);
   font-family: var(--font-geist-sans), 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   scroll-behavior: smooth;
 }
 
@@ -34,6 +60,7 @@ body {
   position: relative;
 }
 
+/* film grain — barely there, kills the "flat div" look */
 body::before {
   content: '';
   position: fixed;
@@ -43,7 +70,51 @@ body::before {
   z-index: 0;
 }
 
+/* ambient aurora behind the hero — one soft indigo pool, nothing loud */
+.aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+.aurora::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -280px;
+  width: 900px;
+  height: 640px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.14), transparent 62%);
+  filter: blur(40px);
+}
+
+/* ── typography & selection details ────────────────────────────────────── */
+
 .mono { font-family: var(--font-geist-mono), 'JetBrains Mono', ui-monospace, monospace; }
+
+::selection { background: rgba(99, 102, 241, 0.35); color: #fff; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* thin, quiet scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); }
+
+/* gradient headline: white core with a cool falloff, Apple keynote style */
+.text-lux {
+  background: linear-gradient(180deg, #fff 55%, rgba(244,244,245,0.66));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
 
 .pill {
   display: inline-flex;
@@ -60,6 +131,53 @@ body::before {
 .pill-accent { background: var(--accent-dim); color: var(--accent); }
 .pill-muted  { background: rgba(255,255,255,0.05); color: var(--text-muted); }
 
+/* ── luxury card primitives ────────────────────────────────────────────── */
+
+/* 1px gradient hairline ring (mask trick) — catches light on the top edge */
+.ring-lux {
+  position: relative;
+}
+.ring-lux::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.45), rgba(255,255,255,0.09) 38%, rgba(255,255,255,0.03) 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* cursor-tracking spotlight: set --mx/--my from JS onMouseMove */
+.spotlight {
+  position: relative;
+  overflow: hidden;
+}
+.spotlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgba(99,102,241,0.10), transparent 65%);
+  opacity: 0;
+  transition: opacity 0.35s var(--ease-lux);
+  pointer-events: none;
+}
+.spotlight:hover::after { opacity: 1; }
+
+/* smooth expand/collapse without measuring heights */
+.reveal-rows {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.55s var(--ease-lux);
+}
+.reveal-rows.open { grid-template-rows: 1fr; }
+.reveal-rows > div { overflow: hidden; min-height: 0; }
+
+/* ── motion ────────────────────────────────────────────────────────────── */
+
 @keyframes scan {
   0%   { top: 0;    opacity: 0.8; }
   100% { top: 100%; opacity: 0; }
@@ -68,6 +186,12 @@ body::before {
 @keyframes fadein {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* entrance with a touch of blur — the "Apple keynote slide" feel */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); filter: blur(5px); }
+  to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
 }
 
 @keyframes countup {
@@ -101,14 +225,31 @@ body::before {
 
 .count-anim { animation: countup 0.5s ease-out forwards; }
 
+.rise   { opacity: 0; animation: rise 0.8s var(--ease-lux) forwards; }
+.rise-1 { animation-delay: 0.05s; }
+.rise-2 { animation-delay: 0.14s; }
+.rise-3 { animation-delay: 0.23s; }
+.rise-4 { animation-delay: 0.34s; }
+
 .stagger > * {
   opacity: 0;
-  animation: fadein 0.4s ease-out forwards;
+  animation: rise 0.6s var(--ease-lux) forwards;
 }
 .stagger > *:nth-child(1) { animation-delay: 0.05s; }
-.stagger > *:nth-child(2) { animation-delay: 0.10s; }
-.stagger > *:nth-child(3) { animation-delay: 0.15s; }
-.stagger > *:nth-child(4) { animation-delay: 0.20s; }
-.stagger > *:nth-child(5) { animation-delay: 0.25s; }
-.stagger > *:nth-child(6) { animation-delay: 0.30s; }
-.stagger > *:nth-child(7) { animation-delay: 0.35s; }
+.stagger > *:nth-child(2) { animation-delay: 0.12s; }
+.stagger > *:nth-child(3) { animation-delay: 0.19s; }
+.stagger > *:nth-child(4) { animation-delay: 0.26s; }
+.stagger > *:nth-child(5) { animation-delay: 0.33s; }
+.stagger > *:nth-child(6) { animation-delay: 0.40s; }
+.stagger > *:nth-child(7) { animation-delay: 0.47s; }
+
+/* accessibility: motion off means off */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html { scroll-behavior: auto; }
+  .rise, .stagger > * { opacity: 1; }
+}

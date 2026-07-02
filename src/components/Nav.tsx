@@ -1,63 +1,48 @@
 "use client";
 
-export default function Nav() {
-  return (
-    <nav
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 60,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0 32px",
-        background: "rgba(10,10,11,0.7)",
-        backdropFilter: "blur(20px)",
-        borderBottom: "0.5px solid var(--border)",
-        zIndex: 100,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="4" y="4" width="16" height="16" rx="2"/>
-          <rect x="9" y="9" width="6" height="6"/>
-          <path d="M15 2v2M9 2v2M15 20v2M9 20v2M2 15h2M2 9h2M20 15h2M20 9h2"/>
-        </svg>
-        <span className="mono" style={{ fontSize: 15, fontWeight: 500, letterSpacing: "-0.01em" }}>
-          webgpu.in
-        </span>
-      </div>
+import { usePathname } from "next/navigation";
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <a
-          href="/upscale"
-          style={{
-            fontSize: 13, color: "var(--accent)", textDecoration: "none",
-            padding: "5px 12px", background: "var(--accent-dim)", borderRadius: 6, fontWeight: 500,
-          }}
+const LINKS = [
+  { href: "/upscale", label: "Upscaler" },
+  { href: "/rotoscope", label: "Rotoscope" },
+  { href: "/bg-remove", label: "BG Remover" },
+];
+
+export default function Nav() {
+  const pathname = usePathname();
+
+  return (
+    <nav className="fixed inset-x-0 top-0 z-100 flex h-14 items-center justify-between border-b border-line bg-canvas/70 px-5 backdrop-blur-xl sm:px-8">
+      <a href="/" className="group flex items-center gap-2.5 no-underline">
+        <svg
+          width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+          className="transition-transform duration-500 ease-[var(--ease-spring)] group-hover:rotate-90"
         >
-          ⚡ Upscaler
-        </a>
-        <a
-          href="/rotoscope"
-          style={{
-            fontSize: 13, color: "var(--accent)", textDecoration: "none",
-            padding: "5px 12px", background: "var(--accent-dim)", borderRadius: 6, fontWeight: 500,
-          }}
-        >
-          🎯 Rotoscope
-        </a>
-        <a
-          href="/bg-remove"
-          style={{
-            fontSize: 13, color: "var(--accent)", textDecoration: "none",
-            padding: "5px 12px", background: "var(--accent-dim)", borderRadius: 6, fontWeight: 500,
-          }}
-        >
-          ✂️ BG Remover
-        </a>
+          <rect x="4" y="4" width="16" height="16" rx="2" />
+          <rect x="9" y="9" width="6" height="6" />
+          <path d="M15 2v2M9 2v2M15 20v2M9 20v2M2 15h2M2 9h2M20 15h2M20 9h2" />
+        </svg>
+        <span className="mono text-[15px] font-medium tracking-tight text-fg">webgpu.in</span>
+      </a>
+
+      <div className="flex items-center gap-1">
+        {LINKS.map((l) => {
+          const active = pathname === l.href;
+          return (
+            <a
+              key={l.href}
+              href={l.href}
+              className={`rounded-lg px-3 py-1.5 text-[13px] font-medium no-underline transition-colors duration-200 ${
+                active
+                  ? "bg-white/[0.06] text-fg"
+                  : "text-muted-fg hover:bg-white/[0.04] hover:text-fg"
+              }`}
+            >
+              {l.label}
+            </a>
+          );
+        })}
       </div>
     </nav>
   );

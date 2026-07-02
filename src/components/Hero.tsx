@@ -4,48 +4,28 @@ import GPUAnalytics from "./GPUAnalytics";
 
 export default function Hero() {
   return (
-    <section
-      style={{
-        padding: "120px 24px 80px",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-      }}
-    >
-      <div style={{ textAlign: "center", marginBottom: 56 }}>
-        <span
-          className="mono"
-          style={{
-            fontSize: 11,
-            letterSpacing: "0.15em",
-            color: "var(--accent)",
-            textTransform: "uppercase",
-            display: "block",
-            marginBottom: 24,
-          }}
-        >
+    <section className="relative flex flex-col items-center px-6 pt-32 pb-16 sm:pt-36">
+      <div className="aurora" />
+
+      <div className="mb-14 text-center">
+        <span className="rise rise-1 mono mb-6 inline-flex items-center gap-2 rounded-full border border-line bg-white/[0.03] px-3.5 py-1.5 text-[11px] tracking-[0.15em] text-fg-secondary uppercase">
+          <span className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_var(--accent)]" />
           Your browser. Your GPU. Your AI.
         </span>
 
-        <h1
-          style={{
-            fontSize: "clamp(40px, 7vw, 72px)",
-            fontWeight: 500,
-            lineHeight: 1.1,
-            letterSpacing: "-0.03em",
-            maxWidth: 680,
-            margin: "0 auto 20px",
-          }}
-        >
+        <h1 className="text-lux rise rise-2 mx-auto mb-5 max-w-2xl text-[clamp(42px,7vw,76px)] leading-[1.05] font-medium tracking-[-0.035em] text-balance">
           See what your GPU can really do
         </h1>
 
-        <p style={{ fontSize: 16, color: "var(--text-muted)", maxWidth: 420, margin: "0 auto", lineHeight: 1.5 }}>
-          Free AI tools that run entirely on your GPU. Nothing uploaded, nothing installed.
+        <p className="rise rise-3 mx-auto max-w-md text-[16px] leading-relaxed text-muted-fg">
+          Free AI tools that run entirely on your GPU.
+          Nothing uploaded, nothing installed.
         </p>
       </div>
 
-      <GPUAnalytics />
+      <div className="rise rise-4 w-full">
+        <GPUAnalytics />
+      </div>
     </section>
   );
 }

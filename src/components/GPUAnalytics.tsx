@@ -51,14 +51,15 @@ export default function GPUAnalytics() {
     <div style={{ width: "100%", maxWidth: 720, margin: "0 auto", display: "flex", flexDirection: "column", gap: 14 }}>
       {/* ===== Main report card ===== */}
       <div
+        className="ring-lux"
         style={{
           position: "relative",
-          background: "var(--surface)",
-          border: "0.5px solid var(--border)",
+          background: "linear-gradient(180deg, rgba(255,255,255,0.02), transparent 40%), var(--surface)",
           borderRadius: 18,
           padding: 32,
           overflow: "hidden",
           minHeight: 220,
+          boxShadow: "0 30px 80px -40px rgba(99,102,241,0.28)",
         }}
       >
         {!done ? (
@@ -132,26 +133,35 @@ export default function GPUAnalytics() {
       </div>
 
       {/* ===== everything else is optional reading, collapsed by default ===== */}
-      {done && !showDetails && (
-        <button
-          onClick={() => setShowDetails(true)}
-          style={{
-            alignSelf: "center", fontSize: 13, color: "var(--text-muted)", background: "transparent",
-            border: "0.5px solid var(--border)", borderRadius: 20, padding: "8px 18px", cursor: "pointer",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
-        >
-          Show device details ↓
-        </button>
-      )}
-      {done && showDetails && (
+      {done && (
         <>
-          <DeviceGrid report={report} />
-          <PercentileBar report={report} />
-          <Capabilities report={report} />
-          <Comparisons report={report} />
-          <ShareCard report={report} />
+          <button
+            onClick={() => setShowDetails((v) => !v)}
+            aria-expanded={showDetails}
+            className="group mx-auto flex cursor-pointer items-center gap-2 rounded-full border border-line bg-transparent px-4.5 py-2 text-[13px] text-muted-fg transition-colors duration-200 hover:border-line-strong hover:text-fg"
+          >
+            Device details
+            <svg
+              width="12" height="12" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              className="transition-transform duration-500 ease-[var(--ease-lux)]"
+              style={{ transform: showDetails ? "rotate(180deg)" : "rotate(0deg)" }}
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+
+          <div className={`reveal-rows ${showDetails ? "open" : ""}`}>
+            <div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 2, paddingBottom: 2 }}>
+                <DeviceGrid report={report} />
+                <PercentileBar report={report} />
+                <Capabilities report={report} />
+                <Comparisons report={report} />
+                <ShareCard report={report} />
+              </div>
+            </div>
+          </div>
         </>
       )}
     </div>
