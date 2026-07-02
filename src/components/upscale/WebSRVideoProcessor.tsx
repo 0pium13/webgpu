@@ -222,16 +222,35 @@ export default function WebSRVideoProcessor({
       setMeta({ w: v.videoWidth, h: v.videoHeight, duration: v.duration });
   }, [input.url]);
 
-  const mul = scale === "4x" ? 4 : 2;
-  const outW = meta ? meta.w * mul : null;
-  const outH = meta ? meta.h * mul : null;
+  // Output is capped at 4K (3840×2160). Beyond that the pixel count explodes
+  // (8K is 4x the pixels of 4K) for detail almost nobody can display, encode
+  // support gets shaky, and processing time quadruples. The cap also lets us
+  // skip the second Anime4K pass entirely when the capped output is ≤2x the
+  // source (e.g. 1080p -> 4K is exactly 2x), which halves the GPU work.
+  const CAP_W = 3840, CAP_H = 2160;
+  const reqMul = scale === "4x" ? 4 : 2;
+  const capInfo = (() => {
+    if (!meta) return null;
+    const rawW = meta.w * reqMul, rawH = meta.h * reqMul;
+    const fit = Math.min(1, CAP_W / rawW, CAP_H / rawH);
+    // encoders want even dimensions
+    const outW = Math.floor((rawW * fit) / 2) * 2;
+    const outH = Math.floor((rawH * fit) / 2) * 2;
+    // if the capped output is within 2x of the source, a single 2x engine
+    // pass already covers it — running 4x would be wasted compute
+    const effMul = reqMul === 4 && outW <= meta.w * 2 && outH <= meta.h * 2 ? 2 : reqMul;
+    return { outW, outH, effMul, capped: fit < 1 };
+  })();
+  const mul = capInfo?.effMul ?? reqMul;
+  const outW = capInfo?.outW ?? null;
+  const outH = capInfo?.outH ?? null;
 
   // ── Anime4K helpers (WebSR) ─────────────────────────────────────────────────
 
   async function loadWebSR(video: HTMLVideoElement) {
     const canvas = canvasRef.current!;
     const canvas1 = canvas1Ref.current!;
-    const is4x = scale === "4x";
+    const is4x = mul === 4;
 
     if (is4x) {
       const [ws1, ws2] = await Promise.all([
@@ -370,8 +389,20 @@ export default function WebSRVideoProcessor({
       } catch { audioTracks = []; }
 
       const fps = 30;
+      // Record at the 4K-capped size — capture a blit canvas when the WebSR
+      // output overshoots the cap, otherwise capture it directly.
+      const recW = outW ?? canvas.width;
+      const recH = outH ?? canvas.height;
+      const needsDownscale = canvas.width !== recW || canvas.height !== recH;
+      const recCanvas = document.createElement("canvas");
+      recCanvas.width = recW; recCanvas.height = recH;
+      const recCtx = recCanvas.getContext("2d")!;
+      recCtx.imageSmoothingEnabled = true;
+      recCtx.imageSmoothingQuality = "high";
+      const captureSrc = needsDownscale ? recCanvas : canvas;
+
       const stream = new MediaStream([
-        ...canvas.captureStream(fps).getVideoTracks(),
+        ...captureSrc.captureStream(fps).getVideoTracks(),
         ...audioTracks,
       ]);
       const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
@@ -390,7 +421,10 @@ export default function WebSRVideoProcessor({
       const dur = video.duration || 1;
       const tick = async () => {
         if (abortRef.current) { rec.stop(); return; }
-        try { await renderAnime4K(ws1, ws2, video, canvas1); } catch {}
+        try {
+          await renderAnime4K(ws1, ws2, video, canvas1);
+          if (needsDownscale) recCtx.drawImage(canvas, 0, 0, recW, recH);
+        } catch {}
         setPct(Math.min(99, Math.round((video.currentTime / dur) * 100)));
         if (!video.ended) (video as any).requestVideoFrameCallback(tick);
       };
@@ -432,8 +466,18 @@ export default function WebSRVideoProcessor({
       setMsg("Loading AI model…");
       const { ws1, ws2 } = await loadWebSR(video);
 
-      const W = canvas.width;
-      const H = canvas.height;
+      // Encode at the 4K-capped size. When the WebSR canvas is within the cap
+      // we encode it directly; when it overshoots (e.g. 4x on a 720p+ source)
+      // we blit through a capped canvas — smaller frames encode faster too.
+      const W = outW ?? canvas.width;
+      const H = outH ?? canvas.height;
+      const needsDownscale = canvas.width !== W || canvas.height !== H;
+      const encCanvas = document.createElement("canvas");
+      encCanvas.width = W; encCanvas.height = H;
+      const encCtx = encCanvas.getContext("2d")!;
+      encCtx.imageSmoothingEnabled = true;
+      encCtx.imageSmoothingQuality = "high";
+
       const duration = video.duration || 1;
       const totalFrames = Math.ceil(duration * fps);
 
@@ -455,8 +499,11 @@ export default function WebSRVideoProcessor({
         await seekToFrame(video, i / fps);
         await renderAnime4K(ws1, ws2, video, canvas1);
 
+        const src = needsDownscale
+          ? (encCtx.drawImage(canvas, 0, 0, W, H), encCanvas)
+          : canvas;
         const ts = Math.round((i / fps) * 1_000_000);
-        const frame = new (window as any).VideoFrame(canvas, { timestamp: ts });
+        const frame = new (window as any).VideoFrame(src, { timestamp: ts });
         encoder.encode(frame, { keyFrame: i % 60 === 0 });
         frame.close();
 
@@ -515,9 +562,13 @@ export default function WebSRVideoProcessor({
       await new Promise<void>((r) => { video.onloadeddata = () => r(); });
       await primeVideoFrame(video);
 
-      canvas.width = video.videoWidth * mul;
-      canvas.height = video.videoHeight * mul;
+      // Encode at the 4K-capped size — the Swin2SR output (at mul×) is drawn
+      // into this canvas with scaling, so oversized results land at exactly 4K.
+      canvas.width = outW ?? video.videoWidth * mul;
+      canvas.height = outH ?? video.videoHeight * mul;
       const ctx = canvas.getContext("2d")!;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
 
       await loadSR((p) => {
         if (p.phase === "download") setMsg(`Loading AI model… ${p.pct}%`);
@@ -564,7 +615,7 @@ export default function WebSRVideoProcessor({
           }
         }, cache);
         cache = nextCache;
-        ctx.drawImage(out, 0, 0);
+        ctx.drawImage(out, 0, 0, canvas.width, canvas.height);
 
         const ts = Math.round((i / fps) * 1_000_000);
         const frame = new (window as any).VideoFrame(canvas, { timestamp: ts });
@@ -633,7 +684,7 @@ export default function WebSRVideoProcessor({
         <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
           {input.file.name} · {fmtBytes(input.file.size)}
           {meta && ` · ${meta.w}×${meta.h}`}
-          {outW && <span style={{ color: "var(--accent)" }}> → {outW}×{outH}</span>}
+          {outW && <span style={{ color: "var(--accent)" }}> → {outW}×{outH}{capInfo?.capped ? " (4K cap)" : ""}</span>}
         </p>
         {!busy && (
           <button onClick={onReset} style={ghostBtn}>← New video</button>
@@ -903,11 +954,12 @@ export default function WebSRVideoProcessor({
       {/* Footer note */}
       {phase === "idle" && (
         <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
-          {engine === "swin2sr"
-            ? `Real AI reconstruction (Swin2SR) on your GPU — rebuilds texture and removes compression artifacts instead of just resizing. ${scale === "4x" ? "Native 4× model. " : "Runs 4× then downsamples 2×, which also denoises. "}Audio preserved from original.`
-            : fastMode
-              ? `Fast mode: seeks each frame, GPU-encodes H.264, muxes to MP4 via ffmpeg. ${scale === "4x" ? "Two-pass 4× AI upscale. " : ""}Audio preserved from original.`
-              : `Real-time: Anime4K CNN upscale. ${scale === "4x" ? "Two-pass 4× — doubles twice through the neural net. " : ""}Processes at video playback speed.`}
+          {(capInfo?.capped ? "Output is capped at 4K (3840×2160) — beyond that, processing time and file size balloon for detail almost no screen can show. " : "") +
+            (engine === "swin2sr"
+              ? `Real AI reconstruction (Swin2SR) on your GPU — rebuilds texture and removes compression artifacts instead of just resizing. ${mul === 4 ? "Native 4× model. " : "Runs 4× then downsamples, which also denoises. "}Audio preserved from original.`
+              : fastMode
+                ? `Fast mode: seeks each frame, GPU-encodes on your GPU, muxes via ffmpeg. ${mul === 4 ? "Two-pass 4× AI upscale. " : ""}Audio preserved from original.`
+                : `Real-time: Anime4K CNN upscale. ${mul === 4 ? "Two-pass 4× — doubles twice through the neural net. " : ""}Processes at video playback speed.`)}
         </p>
       )}
     </div>
