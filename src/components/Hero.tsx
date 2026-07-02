@@ -40,9 +40,8 @@ export default function Hero() {
           See what your GPU can really do
         </h1>
 
-        <p style={{ fontSize: 17, color: "var(--text-muted)", maxWidth: 460, margin: "0 auto", lineHeight: 1.6 }}>
-          We benchmark your GPU in the browser — no install, no upload — then
-          show you exactly what it can run, how fast, and how you compare.
+        <p style={{ fontSize: 16, color: "var(--text-muted)", maxWidth: 420, margin: "0 auto", lineHeight: 1.5 }}>
+          Free AI tools that run entirely on your GPU. Nothing uploaded, nothing installed.
         </p>
       </div>
 

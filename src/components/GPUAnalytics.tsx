@@ -21,6 +21,7 @@ export default function GPUAnalytics() {
   const [report, setReport] = useState<DeviceReport | null>(null);
   const [phase, setPhase] = useState<Phase>("detect");
   const [score, setScore] = useState(0);
+  const [showDetails, setShowDetails] = useState(false);
   const started = useRef(false);
 
   // run the real benchmark once
@@ -130,8 +131,21 @@ export default function GPUAnalytics() {
         )}
       </div>
 
-      {/* ===== detail cards (cascade in once done) ===== */}
-      {done && (
+      {/* ===== everything else is optional reading, collapsed by default ===== */}
+      {done && !showDetails && (
+        <button
+          onClick={() => setShowDetails(true)}
+          style={{
+            alignSelf: "center", fontSize: 13, color: "var(--text-muted)", background: "transparent",
+            border: "0.5px solid var(--border)", borderRadius: 20, padding: "8px 18px", cursor: "pointer",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
+        >
+          Show device details ↓
+        </button>
+      )}
+      {done && showDetails && (
         <>
           <DeviceGrid report={report} />
           <PercentileBar report={report} />

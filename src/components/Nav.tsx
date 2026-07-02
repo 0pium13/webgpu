@@ -30,7 +30,7 @@ export default function Nav() {
         </span>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <a
           href="/upscale"
           style={{
@@ -49,37 +49,14 @@ export default function Nav() {
         >
           🎯 Rotoscope
         </a>
-        {["Showcase", "Tools", "News", "Learn"].map((item) => (
-          <a
-            key={item}
-            href={`#${item.toLowerCase()}`}
-            style={{
-              fontSize: 13,
-              color: "var(--text-muted)",
-              textDecoration: "none",
-              transition: "color 0.15s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
-          >
-            {item}
-          </a>
-        ))}
         <a
-          href="#community"
+          href="/bg-remove"
           style={{
-            fontSize: 13,
-            color: "var(--accent)",
-            textDecoration: "none",
-            padding: "6px 14px",
-            border: "0.5px solid var(--accent-border)",
-            borderRadius: 20,
-            transition: "background 0.15s",
+            fontSize: 13, color: "var(--accent)", textDecoration: "none",
+            padding: "5px 12px", background: "var(--accent-dim)", borderRadius: 6, fontWeight: 500,
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--accent-dim)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
         >
-          Join community
+          ✂️ BG Remover
         </a>
       </div>
     </nav>
