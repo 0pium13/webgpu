@@ -184,3 +184,13 @@ export function GamepadIcon(props: IconProps) {
     </Svg>
   );
 }
+
+/** Image -> 3D — an isometric cube materializing from a sparkle */
+export function CubeIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 3 20 7.5v9L12 21l-8-4.5v-9L12 3Z" />
+      <path d="M12 12 20 7.5M12 12v9M12 12 4 7.5" />
+    </Svg>
+  );
+}

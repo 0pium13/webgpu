@@ -235,22 +235,37 @@ function PercentileBar({ report }: { report: DeviceReport }) {
   }, [beat]);
 
   const ticks = [25, 50, 75];
+  // ember fountain: each spark rises off the marker with its own drift/tempo
+  const sparks = [
+    { dx: -10, delay: 0.0, dur: 1.3, size: 3, c: "#f472b6" },
+    { dx: 7,   delay: 0.35, dur: 1.1, size: 2.5, c: "#c084fc" },
+    { dx: -4,  delay: 0.6, dur: 1.5, size: 2, c: "#ffffff" },
+    { dx: 12,  delay: 0.85, dur: 1.2, size: 3, c: "#818cf8" },
+    { dx: 2,   delay: 1.1, dur: 1.4, size: 2, c: "#f472b6" },
+    { dx: -13, delay: 1.4, dur: 1.15, size: 2.5, c: "#34d399" },
+    { dx: 5,   delay: 1.65, dur: 1.3, size: 2, c: "#ffffff" },
+  ];
+
   return (
-    <div style={{ background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 12, padding: "20px 24px" }}>
-      <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 18 }}>
-        Where your GPU lands against common devices
+    <div style={{ background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 12, padding: "22px 24px 20px" }}>
+      <p style={{ fontSize: 11, color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 22 }}>
+        Where your GPU lands
       </p>
 
-      <div style={{ position: "relative", height: 8, background: "var(--surface-2)", borderRadius: 5, marginBottom: 14 }}>
-        {/* animated fill with a light streak forever sweeping through it */}
-        <div style={{
-          position: "absolute", top: 0, bottom: 0, left: 0, width: `${p}%`,
-          background: `linear-gradient(90deg, ${color}55, ${color})`,
-          borderRadius: 5, overflow: "hidden",
-        }}>
+      <div style={{ position: "relative", height: 9, borderRadius: 6, marginBottom: 16 }}>
+        {/* ghost of the full spectrum — the road ahead */}
+        <div className="grad-spectrum" style={{ position: "absolute", inset: 0, borderRadius: 6, opacity: 0.14 }} />
+
+        {/* vivid spectrum fill, revealed by clip as the score sweeps up */}
+        <div style={{ position: "absolute", inset: 0, width: `${p}%`, borderRadius: 6, overflow: "hidden" }}>
+          <div className="grad-spectrum" style={{
+            position: "absolute", top: 0, bottom: 0, left: 0,
+            width: p > 0 ? `${100 / (p / 100)}%` : "100%",
+            boxShadow: "0 0 18px rgba(129,140,248,0.35)",
+          }} />
           <span style={{
             position: "absolute", top: 0, bottom: 0, width: 60,
-            background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)",
+            background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)",
             animation: "sheen 2.4s cubic-bezier(0.4,0,0.2,1) infinite",
           }} />
         </div>
@@ -262,35 +277,48 @@ function PercentileBar({ report }: { report: DeviceReport }) {
             width: 4, height: 4, borderRadius: "50%",
             transform: "translate(-50%,-50%)",
             background: p >= t ? "#fff" : "var(--border-strong)",
-            boxShadow: p >= t ? `0 0 8px ${color}` : "none",
+            boxShadow: p >= t ? "0 0 10px rgba(192,132,252,0.9)" : "none",
             transition: "background 0.3s, box-shadow 0.3s",
           }} />
         ))}
 
-        {/* marker orb: breathing glow + endless radar ripple */}
+        {/* marker: white-hot orb, breathing glow, radar ripple, ember fountain */}
         <div style={{ position: "absolute", left: `${p}%`, top: "50%", transform: "translate(-50%,-50%)" }}>
+          {sparks.map((s, i) => (
+            <span key={i} style={{
+              position: "absolute", left: "50%", top: -3,
+              width: s.size, height: s.size, borderRadius: "50%",
+              background: s.c, boxShadow: `0 0 6px ${s.c}`,
+              animation: `spark ${s.dur}s ease-out ${s.delay}s infinite`,
+              ["--dx" as string]: `${s.dx}px`,
+            }} />
+          ))}
           <span style={{
             position: "absolute", left: "50%", top: "50%",
-            width: 14, height: 14, borderRadius: "50%",
-            border: `1.5px solid ${color}`,
+            width: 15, height: 15, borderRadius: "50%",
+            border: "1.5px solid #c084fc",
             animation: "ripple 2.2s ease-out infinite",
           }} />
           <span style={{
             position: "relative", display: "block",
-            width: 15, height: 15, borderRadius: "50%",
-            background: color, border: "2.5px solid var(--canvas)",
+            width: 16, height: 16, borderRadius: "50%",
+            background: "radial-gradient(circle at 40% 35%, #fff, #c7d2fe 55%, #818cf8)",
+            border: "2.5px solid var(--canvas)",
             animation: "breathe 2.2s ease-in-out infinite",
-            ["--glow" as string]: `${color}99`,
+            ["--glow" as string]: "rgba(165,180,252,0.75)",
           }} />
         </div>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Entry</span>
-        <span style={{ fontSize: 13, fontWeight: 500, color }} className="mono">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+        <span className="mono" style={{ fontSize: 10.5, color: "var(--text-dim)", letterSpacing: "0.14em", textTransform: "uppercase" }}>Entry</span>
+        <span className="text-spectrum" style={{
+          fontSize: 17, fontWeight: 650, letterSpacing: "-0.02em",
+          fontVariantNumeric: "tabular-nums", textAlign: "center",
+        }}>
           Faster than {Math.round(p)}% of devices
         </span>
-        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Flagship</span>
+        <span className="mono" style={{ fontSize: 10.5, color: "var(--text-dim)", letterSpacing: "0.14em", textTransform: "uppercase" }}>Flagship</span>
       </div>
     </div>
   );

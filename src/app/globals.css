@@ -227,6 +227,25 @@ body::before {
   100% { transform: translate(-50%,-50%) scale(2.8); opacity: 0; }
 }
 
+/* embers rising off the percentile marker — each spark gets its own
+   --dx drift, delay and duration inline for an organic fountain */
+@keyframes spark {
+  0%   { transform: translate(-50%, 0) scale(1); opacity: 0; }
+  12%  { opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx, 0px)), -30px) scale(0.25); opacity: 0; }
+}
+
+/* spectrum gradient used by both the bar fill and the headline number */
+.grad-spectrum {
+  background-image: linear-gradient(90deg, #22c55e, #6366f1 45%, #a855f7 72%, #ec4899);
+}
+.text-spectrum {
+  background-image: linear-gradient(90deg, #34d399, #818cf8 45%, #c084fc 72%, #f472b6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 @keyframes eq {
   0%, 100% { transform: scaleY(0.3); opacity: 0.5; }
   50%      { transform: scaleY(1); opacity: 1; }

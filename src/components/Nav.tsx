@@ -6,6 +6,7 @@ const LINKS = [
   { href: "/upscale", label: "Upscaler" },
   { href: "/rotoscope", label: "Rotoscope" },
   { href: "/bg-remove", label: "BG Remover" },
+  { href: "/image-to-3d", label: "3D" },
 ];
 
 export default function Nav() {

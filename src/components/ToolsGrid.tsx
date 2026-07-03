@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback } from "react";
-import { UpscaleIcon, RotoscopeIcon, BgRemoveIcon } from "./Icons";
+import { UpscaleIcon, RotoscopeIcon, BgRemoveIcon, CubeIcon } from "./Icons";
 
 const TOOLS = [
   { href: "/upscale", Icon: UpscaleIcon, name: "Upscaler", desc: "Real AI detail reconstruction. Up to 4K." },
   { href: "/rotoscope", Icon: RotoscopeIcon, name: "Rotoscope", desc: "Cut out and track any object, even in video." },
   { href: "/bg-remove", Icon: BgRemoveIcon, name: "Background Remover", desc: "Instant, clean edges. One click." },
+  { href: "/image-to-3d", Icon: CubeIcon, name: "Image to 3D", desc: "One photo becomes a real 3D model. Export GLB, OBJ, STL." },
 ];
 
 export default function ToolsGrid() {
@@ -19,7 +20,7 @@ export default function ToolsGrid() {
 
   return (
     <section className="mx-auto max-w-3xl px-6 pb-24">
-      <div className="stagger grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="stagger grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {TOOLS.map((t) => (
           <a
             key={t.href}

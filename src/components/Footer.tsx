@@ -4,6 +4,7 @@ const LINKS = [
   { name: "Upscaler", href: "/upscale" },
   { name: "Rotoscope", href: "/rotoscope" },
   { name: "BG Remover", href: "/bg-remove" },
+  { name: "Image to 3D", href: "/image-to-3d" },
   { name: "GitHub", href: "https://github.com/0pium13/webgpu" },
 ];
 
