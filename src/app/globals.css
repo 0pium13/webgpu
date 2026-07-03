@@ -209,6 +209,24 @@ body::before {
   50%      { opacity: 0.4; transform: scale(0.8); }
 }
 
+/* light streak sweeping through the percentile fill, forever */
+@keyframes sheen {
+  0%        { transform: translateX(-80px); }
+  55%, 100% { transform: translateX(min(90vw, 780px)); }
+}
+
+/* the marker orb breathes */
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 8px 1px var(--glow, rgba(99,102,241,0.5)); }
+  50%      { box-shadow: 0 0 20px 5px var(--glow, rgba(99,102,241,0.8)); }
+}
+
+/* endless radar ping expanding off the marker */
+@keyframes ripple {
+  0%   { transform: translate(-50%,-50%) scale(0.7); opacity: 0.9; }
+  100% { transform: translate(-50%,-50%) scale(2.8); opacity: 0; }
+}
+
 @keyframes eq {
   0%, 100% { transform: scaleY(0.3); opacity: 0.5; }
   50%      { transform: scaleY(1); opacity: 1; }

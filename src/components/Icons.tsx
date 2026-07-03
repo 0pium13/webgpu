@@ -139,3 +139,48 @@ export function WandIcon(props: IconProps) {
     </Svg>
   );
 }
+
+/** Deep time — hourglass */
+export function HourglassIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M6.5 3.5h11M6.5 20.5h11" />
+      <path d="M8 3.5v2.7c0 2.6 4 3.5 4 5.8 0-2.3 4-3.2 4-5.8V3.5" />
+      <path d="M8 20.5v-2.7c0-2.6 4-3.5 4-5.8 0 2.3 4 3.2 4 5.8v2.7" />
+    </Svg>
+  );
+}
+
+/** Humanity — a crowd of heads */
+export function UsersIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="9" cy="8.5" r="3.25" />
+      <path d="M3.5 19.5c.6-3.3 2.7-5 5.5-5s4.9 1.7 5.5 5" />
+      <path d="M15.5 5.6a3.25 3.25 0 0 1 0 5.8" />
+      <path d="M17.5 14.9c1.7.7 2.7 2.2 3 4.6" />
+    </Svg>
+  );
+}
+
+/** Local AI chat — speech bubble with a sparkle */
+export function ChatIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M20 11.5a7.5 7.5 0 0 1-11 6.6L4.5 19.5l1.4-4.5A7.5 7.5 0 1 1 20 11.5Z" />
+      <path d="M12.5 8.2c.3 1.9 1.35 2.9 3.3 3.3-1.95.4-3 1.4-3.3 3.3-.3-1.9-1.35-2.9-3.3-3.3 1.95-.4 3-1.4 3.3-3.3Z" />
+    </Svg>
+  );
+}
+
+/** Console league — gamepad */
+export function GamepadIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M7 8h10a4.5 4.5 0 0 1 4.4 5.4l-.7 3.2a2.6 2.6 0 0 1-4.6 1L14.6 16H9.4l-1.5 1.6a2.6 2.6 0 0 1-4.6-1l-.7-3.2A4.5 4.5 0 0 1 7 8Z" />
+      <path d="M8.5 11v3M7 12.5h3" />
+      <circle cx="15.5" cy="11.5" r="0.5" fill="currentColor" stroke="none" />
+      <circle cx="17.5" cy="13.5" r="0.5" fill="currentColor" stroke="none" />
+    </Svg>
+  );
+}

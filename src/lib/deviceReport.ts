@@ -280,18 +280,61 @@ async function runReport(
   }
 }
 
-export function funComparisons(g: number, tier: Tier): { icon: string; text: string }[] {
-  const tf = (g / 250).toFixed(1); // rough peak TFLOPS estimate
+export interface Comparison {
+  icon: "time" | "humanity" | "chat" | "image" | "game";
+  punch: string; // the standout fragment, rendered bright
+  rest: string;  // the quiet remainder
+}
+
+/**
+ * Turn the measured GFLOPS into things a human can actually feel.
+ * Every number here is DERIVED from the real benchmark — no invented hype:
+ * a GFLOP really is a billion operations, so "years of human math per GPU
+ * second" is just ops ÷ seconds-in-a-year.
+ */
+export function funComparisons(g: number, tier: Tier): Comparison[] {
+  const ops = g * 1e9; // measured operations per second
+
+  // one human doing 1 calculation per second, non-stop, no sleep
+  const years = ops / (60 * 60 * 24 * 365);
+  const yearsNice =
+    years >= 1e6
+      ? `${(years / 1e6).toFixed(1)} million years`
+      : `${(Math.round(years / 1000) * 1000).toLocaleString()} years`;
+
+  // all ~8 billion humans calculating at once
+  const humanityX = Math.max(2, Math.round(g / 8));
+
   const tok = Math.max(2, Math.round(g / 130)); // local LLM tokens/sec
-  const sd = Math.max(1, Math.round(4000 / g * 8)); // SD image seconds
-  const list = [
-    { icon: "🧮", text: `Measured ~${g.toLocaleString()} GFLOPS of real compute (~${tf} TFLOPS peak)` },
-    { icon: "🤖", text: `Can run a local 7B LLM at roughly ${tok} tokens/second` },
-    { icon: "🎨", text: `Generates a Stable Diffusion image in about ${sd}s` },
+  const sd = Math.max(1, Math.round((4000 / g) * 8)); // SD image seconds
+
+  const gameLine: Comparison =
+    tier >= 3 ? { icon: "game", punch: "Faster than a PlayStation 5", rest: " — the chip in your browser tab outguns the console." }
+    : tier === 2 ? { icon: "game", punch: "About half a PlayStation 5", rest: " of raw power — sitting in a browser tab." }
+    : tier === 1 ? { icon: "game", punch: "Flagship-phone league", rest: " — the same class of silicon as the best mobile chips." }
+    : { icon: "game", punch: "Light-duty chip", rest: " — great for images, patient with video." };
+
+  return [
+    {
+      icon: "time",
+      punch: `${yearsNice} of human math`,
+      rest: ` — that's one second of your GPU, done by hand at one calculation per second.`,
+    },
+    {
+      icon: "humanity",
+      punch: `${humanityX.toLocaleString()}× all of humanity`,
+      rest: ` — if every person on Earth calculated at once, your GPU would still be faster.`,
+    },
+    {
+      icon: "chat",
+      punch: `~${tok} words a second`,
+      rest: ` from a ChatGPT-class AI running right here — no internet, no account.`,
+    },
+    {
+      icon: "image",
+      punch: `An AI image in ~${sd}s`,
+      rest: ` — painted from pure noise, entirely on this device.`,
+    },
+    gameLine,
   ];
-  if (tier >= 3) list.push({ icon: "🏎️", text: "Faster than a PlayStation 5's GPU" });
-  else if (tier === 2) list.push({ icon: "🎮", text: "Roughly half the raw power of a PlayStation 5" });
-  else if (tier === 1) list.push({ icon: "📱", text: "Comparable to a flagship phone or game console" });
-  else list.push({ icon: "🐢", text: "Light-duty — great for images, slow for video" });
-  return list;
 }

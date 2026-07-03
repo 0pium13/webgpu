@@ -9,6 +9,7 @@ import {
   type DeviceReport,
   type Phase,
 } from "@/lib/deviceReport";
+import { HourglassIcon, UsersIcon, ChatIcon, MediaIcon, GamepadIcon } from "@/components/Icons";
 
 const PHASE_TEXT: Record<Phase, string> = {
   detect: "Detecting hardware",
@@ -216,18 +217,79 @@ function DeviceGrid({ report }: { report: DeviceReport }) {
 
 function PercentileBar({ report }: { report: DeviceReport }) {
   const beat = 100 - report.percentile;
+  const color = TIER_COLOR[report.tier];
+  // rAF-driven fill so the % label counts up in perfect sync with the bar
+  const [p, setP] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    const t0 = performance.now();
+    const dur = 1700;
+    const ease = (t: number) => 1 - Math.pow(1 - t, 4);
+    const step = (now: number) => {
+      const k = Math.min(1, (now - t0) / dur);
+      setP(beat * ease(k));
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [beat]);
+
+  const ticks = [25, 50, 75];
   return (
     <div style={{ background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 12, padding: "20px 24px" }}>
-      <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16 }}>
+      <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 18 }}>
         Where your GPU lands against common devices
       </p>
-      <div style={{ position: "relative", height: 6, background: "var(--surface-2)", borderRadius: 4, marginBottom: 12 }}>
-        <div style={{ position: "absolute", inset: 0, width: `${beat}%`, background: TIER_COLOR[report.tier], borderRadius: 4, transition: "width 1.2s cubic-bezier(0.22,1,0.36,1)" }} />
-        <div style={{ position: "absolute", left: `${beat}%`, top: "50%", transform: "translate(-50%,-50%)", width: 14, height: 14, borderRadius: "50%", background: TIER_COLOR[report.tier], border: "2px solid var(--canvas)" }} />
+
+      <div style={{ position: "relative", height: 8, background: "var(--surface-2)", borderRadius: 5, marginBottom: 14 }}>
+        {/* animated fill with a light streak forever sweeping through it */}
+        <div style={{
+          position: "absolute", top: 0, bottom: 0, left: 0, width: `${p}%`,
+          background: `linear-gradient(90deg, ${color}55, ${color})`,
+          borderRadius: 5, overflow: "hidden",
+        }}>
+          <span style={{
+            position: "absolute", top: 0, bottom: 0, width: 60,
+            background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)",
+            animation: "sheen 2.4s cubic-bezier(0.4,0,0.2,1) infinite",
+          }} />
+        </div>
+
+        {/* milestone ticks that ignite as the fill passes them */}
+        {ticks.map((t) => (
+          <span key={t} style={{
+            position: "absolute", left: `${t}%`, top: "50%",
+            width: 4, height: 4, borderRadius: "50%",
+            transform: "translate(-50%,-50%)",
+            background: p >= t ? "#fff" : "var(--border-strong)",
+            boxShadow: p >= t ? `0 0 8px ${color}` : "none",
+            transition: "background 0.3s, box-shadow 0.3s",
+          }} />
+        ))}
+
+        {/* marker orb: breathing glow + endless radar ripple */}
+        <div style={{ position: "absolute", left: `${p}%`, top: "50%", transform: "translate(-50%,-50%)" }}>
+          <span style={{
+            position: "absolute", left: "50%", top: "50%",
+            width: 14, height: 14, borderRadius: "50%",
+            border: `1.5px solid ${color}`,
+            animation: "ripple 2.2s ease-out infinite",
+          }} />
+          <span style={{
+            position: "relative", display: "block",
+            width: 15, height: 15, borderRadius: "50%",
+            background: color, border: "2.5px solid var(--canvas)",
+            animation: "breathe 2.2s ease-in-out infinite",
+            ["--glow" as string]: `${color}99`,
+          }} />
+        </div>
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
         <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Entry</span>
-        <span style={{ fontSize: 13, fontWeight: 500, color: TIER_COLOR[report.tier] }}>Faster than {beat}% of devices</span>
+        <span style={{ fontSize: 13, fontWeight: 500, color }} className="mono">
+          Faster than {Math.round(p)}% of devices
+        </span>
         <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Flagship</span>
       </div>
     </div>
@@ -262,6 +324,14 @@ function Capabilities({ report }: { report: DeviceReport }) {
   );
 }
 
+const COMPARE_ICONS = {
+  time: HourglassIcon,
+  humanity: UsersIcon,
+  chat: ChatIcon,
+  image: MediaIcon,
+  game: GamepadIcon,
+} as const;
+
 function Comparisons({ report }: { report: DeviceReport }) {
   if (report.gflops <= 0) return null;
   const items = funComparisons(report.gflops, report.tier);
@@ -270,13 +340,26 @@ function Comparisons({ report }: { report: DeviceReport }) {
       <p style={{ fontSize: 11, color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 16 }}>
         What that actually means
       </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {items.map((c, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-            <span style={{ fontSize: 17, flexShrink: 0 }}>{c.icon}</span>
-            <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.5 }}>{c.text}</p>
-          </div>
-        ))}
+      <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+        {items.map((c, i) => {
+          const Ic = COMPARE_ICONS[c.icon];
+          return (
+            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+              <span style={{
+                flexShrink: 0, width: 30, height: 30, borderRadius: 9,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: "var(--surface-2)", border: "0.5px solid var(--border)",
+                color: "var(--accent)",
+              }}>
+                <Ic size={15} />
+              </span>
+              <p style={{ fontSize: 14, lineHeight: 1.55, paddingTop: 4 }}>
+                <span style={{ color: "var(--text)", fontWeight: 550 }}>{c.punch}</span>
+                <span style={{ color: "var(--text-muted)" }}>{c.rest}</span>
+              </p>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
