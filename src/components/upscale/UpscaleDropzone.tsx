@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
+import { MediaIcon } from "@/components/Icons";
 
 export default function UpscaleDropzone({ onFile }: { onFile: (f: File) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -54,10 +55,10 @@ export default function UpscaleDropzone({ onFile }: { onFile: (f: File) => void 
           alignItems: "center",
           justifyContent: "center",
           margin: "0 auto 20px",
-          fontSize: 24,
+          color: "var(--accent)",
         }}
       >
-        🎬
+        <MediaIcon size={26} />
       </div>
 
       <p style={{ fontSize: 17, fontWeight: 500, marginBottom: 8 }}>

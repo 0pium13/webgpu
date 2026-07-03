@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ImgFile } from "@/app/bg-remove/page";
+import { BgRemoveIcon } from "@/components/Icons";
 
 type Phase = "idle" | "loading-model" | "processing" | "done" | "error";
 
@@ -172,8 +173,8 @@ export default function BgRemoveProcessor({
       </div>
 
       {phase === "idle" && (
-        <button onClick={run} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10, padding: "14px", fontSize: 15, fontWeight: 500, cursor: "pointer" }}>
-          ✂️ Remove background
+        <button onClick={run} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10, padding: "14px", fontSize: 15, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9 }}>
+          <BgRemoveIcon size={17} /> Remove background
         </button>
       )}
 

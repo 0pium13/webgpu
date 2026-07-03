@@ -6,6 +6,7 @@ import UpscaleDropzone from "@/components/upscale/UpscaleDropzone";
 import WebSRVideoProcessor from "@/components/upscale/WebSRVideoProcessor";
 import ImageProcessor from "@/components/upscale/ImageProcessor";
 import { useGPU, TIER_COLOR, formatDuration } from "@/lib/useGPU";
+import { LockIcon, BoltIcon, InfinityIcon, MediaIcon } from "@/components/Icons";
 
 export type UpscaleScale = "2x" | "4x";
 export type UpscaleFile = { file: File; url: string; isImage: boolean };
@@ -118,16 +119,16 @@ function ScalePicker({ scale, setScale }: { scale: UpscaleScale; setScale: (s: U
 
 function Features() {
   const items = [
-    { icon: "🔒", label: "100% private", desc: "Nothing uploaded. Runs locally." },
-    { icon: "⚡", label: "GPU accelerated", desc: "WebGPU + your own hardware." },
-    { icon: "🆓", label: "Completely free", desc: "No account. No limits." },
-    { icon: "🖼", label: "Video + images", desc: "MP4, MOV, PNG, JPG, WebP." },
+    { Icon: LockIcon, label: "100% private", desc: "Nothing uploaded. Runs locally." },
+    { Icon: BoltIcon, label: "GPU accelerated", desc: "WebGPU + your own hardware." },
+    { Icon: InfinityIcon, label: "Completely free", desc: "No account. No limits." },
+    { Icon: MediaIcon, label: "Video + images", desc: "MP4, MOV, PNG, JPG, WebP." },
   ];
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginTop: 40 }}>
       {items.map((item) => (
         <div key={item.label} style={{ background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 12, padding: "18px 20px" }}>
-          <span style={{ fontSize: 20 }}>{item.icon}</span>
+          <item.Icon size={20} style={{ color: "var(--accent)" }} />
           <p style={{ fontWeight: 500, fontSize: 14, marginTop: 10, marginBottom: 4 }}>{item.label}</p>
           <p style={{ fontSize: 13, color: "var(--text-muted)" }}>{item.desc}</p>
         </div>

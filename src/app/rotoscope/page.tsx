@@ -5,6 +5,7 @@ import Nav from "@/components/Nav";
 import RotoscopeStudio from "@/components/rotoscope/RotoscopeStudio";
 import VideoRotoscopeStudio from "@/components/rotoscope/VideoRotoscopeStudio";
 import { useGPU } from "@/lib/useGPU";
+import { RotoscopeIcon } from "@/components/Icons";
 
 export type RotoFile = { file: File; url: string; isVideo: boolean };
 
@@ -74,7 +75,7 @@ function Dropzone({ onFile }: { onFile: (f: File) => void }) {
       }}
     >
       <input type="file" accept="video/*,image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
-      <div style={{ width: 56, height: 56, borderRadius: 14, background: "var(--surface-2)", border: "0.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: 24 }}>🎯</div>
+      <div style={{ width: 56, height: 56, borderRadius: 14, background: "var(--surface-2)", border: "0.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "var(--accent)" }}><RotoscopeIcon size={26} /></div>
       <p style={{ fontSize: 17, fontWeight: 500, marginBottom: 8 }}>Drop a video or image</p>
       <p style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 20 }}>MP4, MOV, WebM · PNG, JPG</p>
       <span style={{ display: "inline-block", padding: "9px 22px", background: "var(--accent)", color: "#fff", borderRadius: 8, fontSize: 14, fontWeight: 500 }}>Choose file</span>

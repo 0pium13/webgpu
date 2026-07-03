@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { UpscaleFile, UpscaleScale } from "@/app/upscale/page";
 import { upscaleToCanvas, srDevice, type SRProgress } from "@/lib/superres";
+import { SparkleIcon } from "@/components/Icons";
 
 type Phase = "idle" | "loading" | "processing" | "done" | "error";
 
@@ -162,8 +163,8 @@ export default function ImageProcessor({
             <img src={input.url} alt="preview" style={{ width: "100%", height: "100%", objectFit: "contain", opacity: busy ? 0.25 : 1 }} />
             {phase === "idle" && (
               <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, background: "rgba(10,10,11,0.4)" }}>
-                <button onClick={start} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 12, padding: "14px 32px", fontSize: 16, fontWeight: 500, cursor: "pointer" }}>
-                  ⚡ Upscale {scale} with AI {dims && `→ ${outW}×${outH}`}
+                <button onClick={start} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 12, padding: "14px 32px", fontSize: 16, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 9 }}>
+                  <SparkleIcon size={17} /> Upscale {scale} with AI {dims && `→ ${outW}×${outH}`}
                 </button>
                 <p className="mono" style={{ fontSize: 12, color: "rgba(255,255,255,0.7)" }}>Swin2SR neural net · reconstructs real detail · runs on your GPU</p>
               </div>

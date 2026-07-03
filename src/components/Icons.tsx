@@ -1,0 +1,141 @@
+"use client";
+
+/**
+ * Bespoke line-icon set — replaces emojis across the UI.
+ *
+ * One visual language: 24×24 grid, 1.5px stroke, round caps, currentColor.
+ * Each icon is drawn to tell the tool's story rather than borrow a generic
+ * glyph: the upscaler *expands out of its frame*, the rotoscope is a
+ * *marquee selection around a subject*, the background remover shows the
+ * *background dissolving into particles*.
+ */
+
+import type { CSSProperties } from "react";
+
+interface IconProps {
+  size?: number;
+  className?: string;
+  style?: CSSProperties;
+  strokeWidth?: number;
+}
+
+function Svg({ size = 20, className, style, strokeWidth = 1.5, children }: IconProps & { children: React.ReactNode }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      style={style}
+      aria-hidden
+    >
+      {children}
+    </svg>
+  );
+}
+
+/** Upscaler — corner brackets bursting open, detail arrow escaping ↗ */
+export function UpscaleIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 8.5V6a2 2 0 0 1 2-2h2.5" />
+      <path d="M15.5 4H18a2 2 0 0 1 2 2v2.5" />
+      <path d="M20 15.5V18a2 2 0 0 1-2 2h-2.5" />
+      <path d="M8.5 20H6a2 2 0 0 1-2-2v-2.5" />
+      <path d="M9.5 14.5 15 9" />
+      <path d="M11.25 9H15v3.75" />
+    </Svg>
+  );
+}
+
+/** Rotoscope — dashed marquee selection locked around a subject */
+export function RotoscopeIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="4" y="4" width="16" height="16" rx="3.5" strokeDasharray="3.4 3.4" />
+      <circle cx="12" cy="12" r="3.5" />
+      <circle cx="12" cy="12" r="0.8" fill="currentColor" stroke="none" />
+    </Svg>
+  );
+}
+
+/** Background remover — the subject stays, the background dissolves into particles */
+export function BgRemoveIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="9.5" cy="14" r="4.5" />
+      <circle cx="16.2" cy="4.8" r="1" fill="currentColor" stroke="none" />
+      <circle cx="20" cy="6" r="0.85" fill="currentColor" stroke="none" opacity="0.75" />
+      <circle cx="17.6" cy="8.8" r="0.9" fill="currentColor" stroke="none" opacity="0.85" />
+      <circle cx="20.8" cy="10.2" r="0.7" fill="currentColor" stroke="none" opacity="0.5" />
+      <circle cx="15.6" cy="12" r="0.8" fill="currentColor" stroke="none" opacity="0.6" />
+      <circle cx="19.4" cy="14.4" r="0.6" fill="currentColor" stroke="none" opacity="0.35" />
+      <circle cx="16.8" cy="17.6" r="0.5" fill="currentColor" stroke="none" opacity="0.25" />
+    </Svg>
+  );
+}
+
+/** Privacy — lock with a solid keyhole dot */
+export function LockIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="5.5" y="10.5" width="13" height="9" rx="2.5" />
+      <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" />
+      <circle cx="12" cy="15" r="1" fill="currentColor" stroke="none" />
+    </Svg>
+  );
+}
+
+/** GPU power — lightning bolt */
+export function BoltIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M13 2.5 4.75 13.5h6.25l-1 8L18.25 10.5H12l1-8Z" />
+    </Svg>
+  );
+}
+
+/** Free forever — infinity loop */
+export function InfinityIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M8.4 15.6a3.6 3.6 0 1 1 0-7.2c3.6 0 3.6 7.2 7.2 7.2a3.6 3.6 0 1 0 0-7.2c-3.6 0-3.6 7.2-7.2 7.2Z" />
+    </Svg>
+  );
+}
+
+/** Video + images — a frame holding a landscape */
+export function MediaIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="3.5" y="5" width="17" height="14" rx="2.5" />
+      <path d="m3.5 15.5 5-4.5 4 4 3-2.5 5 3.8" />
+      <circle cx="15.75" cy="9.25" r="1.25" />
+    </Svg>
+  );
+}
+
+/** AI action — a four-point star with a small companion sparkle */
+export function SparkleIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M11 4.5c.55 3.3 2.35 5.1 5.65 5.65-3.3.55-5.1 2.35-5.65 5.65-.55-3.3-2.35-5.1-5.65-5.65 3.3-.55 5.1-2.35 5.65-5.65Z" />
+      <path d="M17.75 14.5c.3 1.8 1.28 2.78 3.08 3.08-1.8.3-2.78 1.28-3.08 3.08-.3-1.8-1.28-2.78-3.08-3.08 1.8-.3 2.78-1.28 3.08-3.08Z" />
+    </Svg>
+  );
+}
+
+/** Auto-select — magic wand with a sparkle at the tip */
+export function WandIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4.5 19.5 13.5 10.5" />
+      <path d="M17.25 3.75c.35 2.05 1.45 3.15 3.5 3.5-2.05.35-3.15 1.45-3.5 3.5-.35-2.05-1.45-3.15-3.5-3.5 2.05-.35 3.15-1.45 3.5-3.5Z" />
+    </Svg>
+  );
+}

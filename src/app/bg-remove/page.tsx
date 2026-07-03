@@ -4,6 +4,7 @@ import { useState } from "react";
 import Nav from "@/components/Nav";
 import BgRemoveProcessor from "@/components/bg-remove/BgRemoveProcessor";
 import { useGPU, TIER_COLOR } from "@/lib/useGPU";
+import { BgRemoveIcon } from "@/components/Icons";
 
 export type ImgFile = { file: File; url: string };
 
@@ -73,7 +74,7 @@ function Dropzone({ onFile }: { onFile: (f: File) => void }) {
       }}
     >
       <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
-      <div style={{ width: 56, height: 56, borderRadius: 14, background: "var(--surface-2)", border: "0.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: 24 }}>✂️</div>
+      <div style={{ width: 56, height: 56, borderRadius: 14, background: "var(--surface-2)", border: "0.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "var(--accent)" }}><BgRemoveIcon size={26} /></div>
       <p style={{ fontSize: 17, fontWeight: 500, marginBottom: 8 }}>Drop an image here</p>
       <p style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 20 }}>PNG, JPG, WebP</p>
       <span style={{ display: "inline-block", padding: "9px 22px", background: "var(--accent)", color: "#fff", borderRadius: 8, fontSize: 14, fontWeight: 500 }}>Choose image</span>

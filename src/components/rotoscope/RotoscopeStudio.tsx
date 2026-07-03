@@ -7,6 +7,7 @@ import {
   type SamSession, type SamPoint, type MaskResult,
 } from "@/lib/sam2";
 import { loadDetector, detectObjects, type Detection } from "@/lib/detect";
+import { WandIcon, RotoscopeIcon } from "@/components/Icons";
 
 type Status =
   | "loading-frame" | "loading-models" | "analyzing" | "preparing"
@@ -312,8 +313,8 @@ export default function RotoscopeStudio({ input, onReset }: { input: RotoFile; o
       {/* toolbar */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <div style={{ display: "flex", gap: 4, background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 10, padding: 4 }}>
-          <ToolBtn active={!manualMode} onClick={() => setManualMode(false)}>🎯 Auto-select</ToolBtn>
-          <ToolBtn active={manualMode} onClick={() => setManualMode(true)}>✏️ Manual</ToolBtn>
+          <ToolBtn active={!manualMode} onClick={() => setManualMode(false)}><WandIcon size={14} /> Auto-select</ToolBtn>
+          <ToolBtn active={manualMode} onClick={() => setManualMode(true)}><RotoscopeIcon size={14} /> Manual</ToolBtn>
         </div>
         {manualMode && (
           <div style={{ display: "flex", gap: 4, background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 10, padding: 4 }}>
@@ -454,6 +455,7 @@ function ToolBtn({ children, active, onClick, color }: { children: React.ReactNo
   return (
     <button onClick={onClick} style={{
       padding: "6px 13px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500,
+      display: "inline-flex", alignItems: "center", gap: 6,
       background: active ? "var(--surface-2)" : "transparent",
       color: active ? (color ?? "var(--accent)") : "var(--text-muted)",
     }}>{children}</button>

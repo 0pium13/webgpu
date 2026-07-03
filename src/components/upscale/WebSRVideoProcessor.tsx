@@ -7,6 +7,7 @@ import { createUpscaler, type Content } from "@/lib/websr";
 import { formatDuration } from "@/lib/useGPU";
 import { getFFmpeg, setFFmpegCallbacks } from "@/lib/ffmpeg";
 import { upscaleToCanvas, loadSR, estimateTiles, type FrameCache } from "@/lib/superres";
+import { SparkleIcon } from "@/components/Icons";
 
 type Phase = "idle" | "init" | "processing" | "transcoding" | "done" | "error";
 type Engine = "anime4k" | "swin2sr";
@@ -833,8 +834,9 @@ export default function WebSRVideoProcessor({
                 <button onClick={start} style={{
                   background: "var(--accent)", color: "#fff", border: "none",
                   borderRadius: 12, padding: "14px 32px", fontSize: 16, fontWeight: 500, cursor: "pointer",
+                  display: "inline-flex", alignItems: "center", gap: 9,
                 }}>
-                  ⚡ Upscale {scale} with AI
+                  <SparkleIcon size={17} /> Upscale {scale} with AI
                 </button>
                 <p className="mono" style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
                   {engine === "swin2sr"
