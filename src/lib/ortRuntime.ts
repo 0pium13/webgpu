@@ -33,6 +33,7 @@ export function loadOrt(): Promise<any> {
 
 function configure(ort: any) {
   ort.env.wasm.wasmPaths = `${ORT_BASE}/`;
+  ort.env.logLevel = "fatal"; // session-assignment warnings otherwise flood the console
 }
 
 /** Fetch a model file with byte-level progress, then create a session. */

@@ -57,7 +57,14 @@ export default function ImageTo3DStudio({ input, onReset }: { input: Img3DFile; 
     el.innerHTML = "";
 
     const { RoomEnvironment } = await import("three/examples/jsm/environments/RoomEnvironment.js");
-    const W = el.clientWidth, H = el.clientHeight;
+    // The container is display:none until React re-renders with phase="done".
+    // When the three.js modules come from cache, we get here BEFORE that
+    // paint — clientWidth is 0 and the mesh renders into a 0x0 canvas
+    // ("I see nothing"). Wait for real layout, with a bounded poll.
+    for (let i = 0; i < 40 && el.clientWidth === 0; i++) {
+      await new Promise((r) => requestAnimationFrame(r));
+    }
+    const W = el.clientWidth || 800, H = el.clientHeight || 500;
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(W, H);
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
@@ -97,9 +104,18 @@ export default function ImageTo3DStudio({ input, onReset }: { input: Img3DFile; 
     const tick = () => { controls.update(); renderer.render(scene, camera); raf = requestAnimationFrame(tick); };
     tick();
 
+    const onResize = () => {
+      const w = el.clientWidth, h = el.clientHeight;
+      if (!w || !h) return;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    };
+    window.addEventListener("resize", onResize);
+
     threeRef.current = {
       THREE, scene,
-      dispose: () => { cancelAnimationFrame(raf); controls.dispose(); renderer.dispose(); el.innerHTML = ""; },
+      dispose: () => { cancelAnimationFrame(raf); window.removeEventListener("resize", onResize); controls.dispose(); renderer.dispose(); el.innerHTML = ""; },
     };
   }
 
