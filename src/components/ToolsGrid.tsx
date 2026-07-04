@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { UpscaleIcon, RotoscopeIcon, BgRemoveIcon, CubeIcon, CaptionsIcon, EraserIcon, ConvertIcon } from "./Icons";
+import { UpscaleIcon, RotoscopeIcon, BgRemoveIcon, CubeIcon, CaptionsIcon, EraserIcon, ConvertIcon, ChatIcon } from "./Icons";
 
 const TOOLS = [
   { href: "/upscale", Icon: UpscaleIcon, name: "Upscaler", desc: "Real AI detail reconstruction. Up to 4K." },
@@ -11,6 +11,7 @@ const TOOLS = [
   { href: "/subtitles", Icon: CaptionsIcon, name: "Auto Subtitles", desc: "Hindi, Tamil, Telugu + 25 more. Live, on your GPU." },
   { href: "/erase", Icon: EraserIcon, name: "Magic Eraser", desc: "Paint over anything. AI rebuilds what was behind it." },
   { href: "/convert", Icon: ConvertIcon, name: "Converter", desc: "MP4, MP3, GIF, compress. No upload sites, no ads." },
+  { href: "/chat", Icon: ChatIcon, name: "Local AI Chat", desc: "A real LLM on your GPU. Works offline, keeps secrets." },
 ];
 
 export default function ToolsGrid() {

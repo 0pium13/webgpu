@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/subtitles", label: "Subtitles" },
   { href: "/erase", label: "Eraser" },
   { href: "/convert", label: "Convert" },
+  { href: "/chat", label: "Chat" },
 ];
 
 export default function Nav() {
