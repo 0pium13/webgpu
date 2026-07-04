@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { UpscaleFile, UpscaleScale } from "@/app/upscale/page";
-import { upscaleToCanvas, srDevice, type SRProgress } from "@/lib/superres";
+import { upscaleToCanvas, srDevice, type SRProgress } from "@/lib/realesrgan";
 import { SparkleIcon } from "@/components/Icons";
 
 type Phase = "idle" | "loading" | "processing" | "done" | "error";
@@ -166,7 +166,7 @@ export default function ImageProcessor({
                 <button onClick={start} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 12, padding: "14px 32px", fontSize: 16, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 9 }}>
                   <SparkleIcon size={17} /> Upscale {scale} with AI {dims && `→ ${outW}×${outH}`}
                 </button>
-                <p className="mono" style={{ fontSize: 12, color: "rgba(255,255,255,0.7)" }}>Swin2SR neural net · reconstructs real detail · runs on your GPU</p>
+                <p className="mono" style={{ fontSize: 12, color: "rgba(255,255,255,0.7)" }}>Real-ESRGAN · photo-real texture reconstruction · runs on your GPU</p>
               </div>
             )}
             {busy && (
@@ -204,7 +204,7 @@ export default function ImageProcessor({
         <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px,1fr))", gap: 10 }}>
             <Stat label="Resolution" value={`${outW}×${outH}`} />
-            <Stat label="Engine" value={`Swin2SR · ${srDevice() === "webgpu" ? "GPU" : "CPU"}`} />
+            <Stat label="Engine" value={`Real-ESRGAN · ${srDevice() === "webgpu" ? "GPU" : "CPU"}`} />
             <Stat label="Size" value={formatBytes(outSize)} />
             <Stat label="Format" value="PNG" />
           </div>
@@ -224,7 +224,7 @@ export default function ImageProcessor({
 
       {phase === "idle" && (
         <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
-          Swin2SR is a real super-resolution neural net (not interpolation). It rebuilds texture and removes compression artifacts. Larger images process in tiles and take longer.
+          Real-ESRGAN is a GAN-trained super-resolution net — it reconstructs believable texture (skin, hair, fabric) instead of just smoothing. Larger images process in tiles and take longer.
         </p>
       )}
     </div>

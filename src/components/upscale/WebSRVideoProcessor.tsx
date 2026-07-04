@@ -6,7 +6,7 @@ import CompareSlider from "./CompareSlider";
 import { createUpscaler, type Content } from "@/lib/websr";
 import { formatDuration } from "@/lib/useGPU";
 import { getFFmpeg, setFFmpegCallbacks } from "@/lib/ffmpeg";
-import { upscaleToCanvas, loadSR, estimateTiles, type FrameCache } from "@/lib/superres";
+import { upscaleToCanvas, loadSR, estimateTiles, type FrameCache } from "@/lib/realesrgan";
 import { SparkleIcon } from "@/components/Icons";
 
 type Phase = "idle" | "init" | "processing" | "transcoding" | "done" | "error";
@@ -666,14 +666,14 @@ export default function WebSRVideoProcessor({
 
   // Rough pre-flight estimate for Quality mode, so users aren't surprised by a
   // multi-hour run: Swin2SR reconstructs every sampled frame tile-by-tile, with
-  // no cheap interpolation between frames. ~6.1s/tile is a representative figure
-  // measured in-browser at the current 256px tile size; actual speed varies by GPU.
+  // no cheap interpolation between frames. ~0.4s/tile is a representative figure
+  // for Real-ESRGAN 112px cores on WebGPU; actual speed varies by GPU.
   const qualityEstimate = (() => {
     if (engine !== "swin2sr" || !meta) return null;
     const qualityFps = 12;
     const frames = Math.ceil(meta.duration * qualityFps);
     const tiles = estimateTiles(meta.w, meta.h);
-    const totalSeconds = frames * tiles * 6.1;
+    const totalSeconds = frames * tiles * 0.4;
     return { frames, tilesPerFrame: tiles, totalSeconds };
   })();
 
@@ -713,7 +713,7 @@ export default function WebSRVideoProcessor({
               fontSize: 11, color: "var(--text-dim)", padding: "4px 10px",
               border: "0.5px solid var(--border)", borderRadius: 20,
             }}>
-              engine: {engine === "swin2sr" ? "Swin2SR (quality)" : "Anime4K (fast)"}
+              engine: {engine === "swin2sr" ? "Real-ESRGAN (photo-real)" : "Anime4K (fast)"}
             </span>
           </div>
 
@@ -722,7 +722,7 @@ export default function WebSRVideoProcessor({
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <span style={{ fontSize: 13, color: "var(--text-muted)", minWidth: 60 }}>Engine:</span>
               {([
-                [true, "Quality", "Swin2SR · real detail reconstruction · slow"],
+                [true, "Quality", "Real-ESRGAN · photo-real texture"],
                 [false, "Fast", "Anime4K · much quicker · far less detail"],
               ] as [boolean, string, string][]).map(([v, label, sub]) => (
                 <button key={String(v)} onClick={() => setQualityPreferred(v)}
@@ -840,7 +840,7 @@ export default function WebSRVideoProcessor({
                 </button>
                 <p className="mono" style={{ fontSize: 12, color: "rgba(255,255,255,0.65)" }}>
                   {engine === "swin2sr"
-                    ? "Swin2SR transformer · reconstructs real detail · runs on your GPU"
+                    ? "Real-ESRGAN · photo-real texture · runs on your GPU"
                     : `Anime4K CNN · ${fastMode ? "GPU-encoded MP4" : "real-time WebM"} · runs on your GPU`}
                 </p>
               </div>
@@ -958,7 +958,7 @@ export default function WebSRVideoProcessor({
         <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
           {(capInfo?.capped ? "Output is capped at 4K (3840×2160) — beyond that, processing time and file size balloon for detail almost no screen can show. " : "") +
             (engine === "swin2sr"
-              ? `Real AI reconstruction (Swin2SR) on your GPU — rebuilds texture and removes compression artifacts instead of just resizing. ${mul === 4 ? "Native 4× model. " : "Runs 4× then downsamples, which also denoises. "}Audio preserved from original.`
+              ? `Real AI texture reconstruction (Real-ESRGAN) on your GPU — rebuilds skin, hair and surface detail instead of just resizing. ${mul === 4 ? "Native 4× model. " : "Runs 4× then downsamples, which also denoises. "}Audio preserved from original.`
               : fastMode
                 ? `Fast mode: seeks each frame, GPU-encodes on your GPU, muxes via ffmpeg. ${mul === 4 ? "Two-pass 4× AI upscale. " : ""}Audio preserved from original.`
                 : `Real-time: Anime4K CNN upscale. ${mul === 4 ? "Two-pass 4× — doubles twice through the neural net. " : ""}Processes at video playback speed.`)}
