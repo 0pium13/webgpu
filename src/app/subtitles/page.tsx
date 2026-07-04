@@ -6,8 +6,15 @@ import { useGPU } from "@/lib/useGPU";
 import { CaptionsIcon, SparkleIcon } from "@/components/Icons";
 import {
   decodeAudio, transcribe, whisperDevice, toSRT, toVTT, toTXT,
-  type SubtitleLine, type WhisperPhase,
+  WHISPER_MODELS, LANGUAGES,
+  type SubtitleLine, type WhisperPhase, type WhisperTier,
 } from "@/lib/whisper";
+
+const TIER_HINTS: Record<WhisperTier, string> = {
+  fast: "Great for English",
+  accurate: "Good for Hindi & Indian languages",
+  max: "Best possible — every Indian language",
+};
 
 type Phase = "idle" | "working" | "done" | "error";
 type MediaFile = { file: File; url: string };
@@ -47,7 +54,8 @@ export default function SubtitlesPage() {
           <p style={{ fontSize: 16, color: "var(--text-muted)", maxWidth: 560, lineHeight: 1.6 }}>
             Drop any video or audio — Whisper transcribes it on your GPU, lines
             appear live as they&apos;re heard, export SRT for any editor.
-            Nothing uploaded.
+            Hindi, Tamil, Telugu, Bengali, Urdu &amp; every Indian language
+            Whisper knows. Nothing uploaded.
           </p>
         </div>
 
@@ -56,7 +64,7 @@ export default function SubtitlesPage() {
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: gpu.supported ? "var(--green)" : "var(--amber)", flexShrink: 0 }} />
             <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
               {gpu.scanning ? "Detecting your GPU…" : (
-                <>Whisper runs on <span className="mono" style={{ color: "var(--text)" }}>{gpu.supported ? "your GPU (WebGPU)" : "CPU (slower)"}</span> · first run downloads a ~145MB model, cached after</>
+                <>Whisper runs on <span className="mono" style={{ color: "var(--text)" }}>{gpu.supported ? "your GPU (WebGPU)" : "CPU (slower)"}</span> · model downloads once, cached after</>
               )}
             </p>
           </div>
@@ -74,6 +82,9 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
   const [pct, setPct] = useState(0);
   const [lines, setLines] = useState<SubtitleLine[]>([]);
   const [errMsg, setErrMsg] = useState("");
+  const [tier, setTier] = useState<WhisperTier>("fast");
+  const [language, setLanguage] = useState("auto");
+  const [translate, setTranslate] = useState(false);
   const linesBox = useRef<HTMLDivElement>(null);
 
   async function start() {
@@ -98,7 +109,7 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
       };
 
       const audio = await decodeAudio(input.file);
-      const finalLines = await transcribe(audio, onProgress);
+      const finalLines = await transcribe(audio, onProgress, { tier, language, translate });
       setLines(finalLines);
       setPct(100);
       setPhase("done");
@@ -132,7 +143,57 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
       {/* transcript surface */}
       <div style={{ position: "relative", background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 16, overflow: "hidden", minHeight: 320 }}>
         {phase === "idle" && (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, minHeight: 320 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 22, minHeight: 320, padding: "36px 24px" }}>
+            {/* model tier — bigger model = dramatically better Indic accuracy */}
+            <div style={{ width: "100%", maxWidth: 520 }}>
+              <p className="mono" style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: 8 }}>Model</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                {(Object.keys(WHISPER_MODELS) as WhisperTier[]).map((t) => {
+                  const m = WHISPER_MODELS[t];
+                  const active = tier === t;
+                  return (
+                    <button key={t} onClick={() => setTier(t)} style={{
+                      background: active ? "var(--accent-dim)" : "var(--surface-2)",
+                      border: active ? "0.5px solid var(--accent)" : "0.5px solid var(--border)",
+                      borderRadius: 10, padding: "10px 8px", cursor: "pointer", textAlign: "left",
+                    }}>
+                      <span style={{ display: "block", fontSize: 13, fontWeight: 500, color: active ? "var(--accent)" : "var(--text)" }}>
+                        {m.label} <span className="mono" style={{ fontSize: 10.5, color: "var(--text-dim)", fontWeight: 400 }}>{m.size}</span>
+                      </span>
+                      <span style={{ display: "block", fontSize: 11, color: "var(--text-muted)", marginTop: 3, lineHeight: 1.35 }}>{TIER_HINTS[t]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* language + translate */}
+            <div style={{ width: "100%", maxWidth: 520, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+              <div style={{ flex: "1 1 220px" }}>
+                <p className="mono" style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: 8 }}>Spoken language</p>
+                <select value={language} onChange={(e) => setLanguage(e.target.value)} style={{
+                  width: "100%", background: "var(--surface-2)", color: "var(--text)",
+                  border: "0.5px solid var(--border)", borderRadius: 10, padding: "10px 12px",
+                  fontSize: 13.5, cursor: "pointer", appearance: "none",
+                }}>
+                  {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+                </select>
+              </div>
+              <button onClick={() => setTranslate(!translate)} style={{
+                background: translate ? "var(--accent-dim)" : "var(--surface-2)",
+                border: translate ? "0.5px solid var(--accent)" : "0.5px solid var(--border)",
+                borderRadius: 10, padding: "10px 14px", fontSize: 13, cursor: "pointer",
+                color: translate ? "var(--accent)" : "var(--text-muted)", whiteSpace: "nowrap",
+              }}>
+                {translate ? "✓ " : ""}Translate to English
+              </button>
+            </div>
+            {language !== "auto" && !translate && (
+              <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: -12 }}>
+                Subtitles will be in native script — picking the language beats auto-detect for accuracy.
+              </p>
+            )}
+
             <button onClick={start} style={{
               background: "var(--accent)", color: "#fff", border: "none", borderRadius: 12,
               padding: "14px 32px", fontSize: 16, fontWeight: 500, cursor: "pointer",
@@ -140,8 +201,8 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
             }}>
               <SparkleIcon size={17} /> Transcribe
             </button>
-            <p className="mono" style={{ fontSize: 12, color: "var(--text-muted)" }}>
-              Whisper · lines stream in live · runs on your GPU
+            <p className="mono" style={{ fontSize: 12, color: "var(--text-muted)", marginTop: -8 }}>
+              Whisper {WHISPER_MODELS[tier].label} · lines stream in live · runs on your GPU
             </p>
           </div>
         )}

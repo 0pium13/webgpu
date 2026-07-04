@@ -12,7 +12,50 @@
  * streaming and simple, predictable code.
  */
 
-const MODEL_ID = "onnx-community/whisper-base";
+/**
+ * Model tiers. Indian/South-Asian language accuracy scales hard with model
+ * size — base is fine for English, but Hindi/Tamil/Telugu/Bengali etc. need
+ * small at minimum and are dramatically better on large-v3-turbo.
+ */
+export const WHISPER_MODELS = {
+  fast:     { id: "onnx-community/whisper-base",           label: "Fast",     size: "~145MB", dtype: "fp32" as const },
+  accurate: { id: "onnx-community/whisper-small",          label: "Accurate", size: "~470MB", dtype: "fp32" as const },
+  max:      { id: "onnx-community/whisper-large-v3-turbo", label: "Max",      size: "~1.6GB", dtype: "fp16" as const },
+};
+export type WhisperTier = keyof typeof WHISPER_MODELS;
+
+/** Languages Whisper genuinely supports, South Asia first. */
+export const LANGUAGES: { code: string; label: string }[] = [
+  { code: "auto", label: "Auto-detect" },
+  { code: "hindi", label: "Hindi — हिन्दी" },
+  { code: "urdu", label: "Urdu — اردو" },
+  { code: "bengali", label: "Bengali — বাংলা" },
+  { code: "tamil", label: "Tamil — தமிழ்" },
+  { code: "telugu", label: "Telugu — తెలుగు" },
+  { code: "kannada", label: "Kannada — ಕನ್ನಡ" },
+  { code: "malayalam", label: "Malayalam — മലയാളം" },
+  { code: "marathi", label: "Marathi — मराठी" },
+  { code: "gujarati", label: "Gujarati — ગુજરાતી" },
+  { code: "punjabi", label: "Punjabi — ਪੰਜਾਬੀ" },
+  { code: "nepali", label: "Nepali — नेपाली" },
+  { code: "sinhala", label: "Sinhala — සිංහල" },
+  { code: "assamese", label: "Assamese — অসমীয়া" },
+  { code: "sanskrit", label: "Sanskrit — संस्कृतम्" },
+  { code: "pashto", label: "Pashto — پښتو" },
+  { code: "persian", label: "Persian — فارسی" },
+  { code: "english", label: "English" },
+  { code: "spanish", label: "Spanish" },
+  { code: "french", label: "French" },
+  { code: "german", label: "German" },
+  { code: "arabic", label: "Arabic" },
+  { code: "chinese", label: "Chinese" },
+  { code: "japanese", label: "Japanese" },
+  { code: "korean", label: "Korean" },
+  { code: "russian", label: "Russian" },
+  { code: "portuguese", label: "Portuguese" },
+  { code: "indonesian", label: "Indonesian" },
+];
+
 const SAMPLE_RATE = 16000;
 const WINDOW_S = 28;
 const OVERLAP_S = 2;
@@ -28,16 +71,18 @@ export type WhisperPhase =
   | { step: "decode" }
   | { step: "transcribe"; doneSec: number; totalSec: number; lines: SubtitleLine[] };
 
-let asrPromise: Promise<any> | null = null;
+const asrCache = new Map<WhisperTier, Promise<any>>();
 let usedDevice: "webgpu" | "wasm" = "webgpu";
 
 export function whisperDevice() {
   return usedDevice;
 }
 
-export async function loadWhisper(onProgress?: (p: WhisperPhase) => void) {
-  if (asrPromise) return asrPromise;
-  asrPromise = (async () => {
+export async function loadWhisper(tier: WhisperTier = "fast", onProgress?: (p: WhisperPhase) => void) {
+  const cached = asrCache.get(tier);
+  if (cached) return cached;
+  const { id, dtype } = WHISPER_MODELS[tier];
+  const promise = (async () => {
     const tj: any = await import("@huggingface/transformers");
     const { pipeline, env } = tj;
     env.allowLocalModels = false;
@@ -47,22 +92,23 @@ export async function loadWhisper(onProgress?: (p: WhisperPhase) => void) {
       }
     };
     try {
-      const asr = await pipeline("automatic-speech-recognition", MODEL_ID, {
-        device: "webgpu", dtype: "fp32", progress_callback: cb,
+      const asr = await pipeline("automatic-speech-recognition", id, {
+        device: "webgpu", dtype, progress_callback: cb,
       });
       usedDevice = "webgpu";
       return asr;
     } catch (e) {
       console.warn("[whisper] webgpu failed, wasm fallback", e);
-      const asr = await pipeline("automatic-speech-recognition", MODEL_ID, {
+      const asr = await pipeline("automatic-speech-recognition", id, {
         device: "wasm", progress_callback: cb,
       });
       usedDevice = "wasm";
       return asr;
     }
   })();
-  asrPromise.catch(() => { asrPromise = null; });
-  return asrPromise;
+  asrCache.set(tier, promise);
+  promise.catch(() => asrCache.delete(tier));
+  return promise;
 }
 
 /** Decode any audio/video file to 16kHz mono Float32. */
@@ -82,12 +128,25 @@ export async function decodeAudio(file: File): Promise<Float32Array> {
   return mono.getChannelData(0).slice();
 }
 
+export interface TranscribeOptions {
+  tier?: WhisperTier;
+  /** whisper language name ("hindi", "tamil"…) or "auto" — forcing the
+   *  language noticeably beats auto-detect on Indic speech */
+  language?: string;
+  /** true = translate everything to English instead of native-script output */
+  translate?: boolean;
+}
+
 /** Transcribe with live per-window streaming. Returns the final line list. */
 export async function transcribe(
   audio: Float32Array,
-  onProgress: (p: WhisperPhase) => void
+  onProgress: (p: WhisperPhase) => void,
+  opts: TranscribeOptions = {}
 ): Promise<SubtitleLine[]> {
-  const asr = await loadWhisper(onProgress);
+  const asr = await loadWhisper(opts.tier ?? "fast", onProgress);
+  const genOpts: any = { return_timestamps: true };
+  if (opts.language && opts.language !== "auto") genOpts.language = opts.language;
+  if (opts.translate) genOpts.task = "translate";
   const totalSec = audio.length / SAMPLE_RATE;
   const lines: SubtitleLine[] = [];
 
@@ -98,7 +157,7 @@ export async function transcribe(
     const chunk = audio.subarray(start, Math.min(start + win, audio.length));
     const offsetSec = start / SAMPLE_RATE;
 
-    const out = await asr(chunk, { return_timestamps: true });
+    const out = await asr(chunk, genOpts);
     const rawChunks: any[] = out?.chunks ?? [];
 
     for (const c of rawChunks) {
