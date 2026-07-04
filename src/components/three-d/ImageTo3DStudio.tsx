@@ -23,7 +23,7 @@ export default function ImageTo3DStudio({ input, onReset }: { input: Img3DFile; 
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [step, setStep] = useState<To3DPhase | null>(null);
-  const [quality, setQuality] = useState<96 | 128>(96);
+  const [quality, setQuality] = useState<96 | 160 | 224>(160);
   const [stats, setStats] = useState<{ verts: number; tris: number } | null>(null);
   const [errMsg, setErrMsg] = useState("");
   const [cutoutUrl, setCutoutUrl] = useState<string | null>(null);
@@ -56,18 +56,23 @@ export default function ImageTo3DStudio({ input, onReset }: { input: Img3DFile; 
     const el = viewerRef.current!;
     el.innerHTML = "";
 
+    const { RoomEnvironment } = await import("three/examples/jsm/environments/RoomEnvironment.js");
     const W = el.clientWidth, H = el.clientHeight;
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(W, H);
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     el.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(40, W / H, 0.01, 100);
     camera.position.set(1.6, 1.1, 1.6);
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x334, 1.15));
-    const dir = new THREE.DirectionalLight(0xffffff, 1.6);
+    // image-based lighting sells the surface far better than point lights
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    const dir = new THREE.DirectionalLight(0xffffff, 0.9);
     dir.position.set(2, 3, 2);
     scene.add(dir);
 
@@ -76,7 +81,7 @@ export default function ImageTo3DStudio({ input, onReset }: { input: Img3DFile; 
     geo.setAttribute("color", new THREE.BufferAttribute(mesh.colors, 3));
     geo.setIndex(new THREE.BufferAttribute(mesh.indices, 1));
     geo.computeVertexNormals();
-    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0.0, side: THREE.DoubleSide });
+    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.62, metalness: 0.0, envMapIntensity: 1.1, side: THREE.DoubleSide });
     const obj = new THREE.Mesh(geo, mat);
     obj.rotation.x = -Math.PI / 2; // TripoSR is z-up; three.js is y-up
     const group = new THREE.Group();
@@ -152,14 +157,14 @@ export default function ImageTo3DStudio({ input, onReset }: { input: Img3DFile; 
         {phase === "idle" && (
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, background: "rgba(10,10,11,0.45)" }}>
             <div style={{ display: "flex", gap: 8 }}>
-              {([96, 128] as const).map((q) => (
+              {([96, 160, 224] as const).map((q) => (
                 <button key={q} onClick={() => setQuality(q)} style={{
                   padding: "7px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer",
                   border: quality === q ? "0.5px solid var(--accent)" : "0.5px solid var(--border)",
                   background: quality === q ? "var(--accent-dim)" : "rgba(10,10,11,0.6)",
                   color: quality === q ? "var(--accent)" : "var(--text-muted)",
                 }}>
-                  {q === 96 ? "Draft · faster" : "High · finer mesh"}
+                  {q === 96 ? "Draft · ~1 min" : q === 160 ? "High · a few min" : "Ultra · slow, finest"}
                 </button>
               ))}
             </div>

@@ -234,29 +234,87 @@ export async function imageTo3D(
   const densName = decoder.outputNames.find((n: string) => /dens|sigma/i.test(n)) ?? decoder.outputNames[0];
   const colName = decoder.outputNames.find((n: string) => /col|rgb/i.test(n)) ?? decoder.outputNames[1];
 
-  // density field over the grid, in batches
+  // ── hierarchical density sampling: coarse scan, then fine detail only
+  // where the surface actually is. 224³ everywhere would be 11M queries;
+  // the band around the surface is typically <10% of the volume.
   const R = resolution;
-  const field = new Float32Array(R * R * R);
   const BATCH = 96 * 96 * 8;
-  const coords = new Float32Array(BATCH * 3);
-  let write = 0;
-  const flush = async (count: number, offset: number) => {
+
+  async function queryDensity(coords: Float32Array, count: number): Promise<Float32Array> {
     const pts = new ort.Tensor("float32", coords.subarray(0, count * 3), [count, 3]);
     const out = await decoder.run({ [triName]: triplane, [ptsName]: pts });
-    field.set(out[densName].data.subarray(0, count), offset);
-  };
-  const lin = (g: number) => (g / (R - 1)) * 2 * BOUND - BOUND;
-  let pending = 0, base = 0;
-  for (let x = 0; x < R; x++) {
-    for (let y = 0; y < R; y++) for (let z = 0; z < R; z++) {
-      coords[pending * 3] = lin(x); coords[pending * 3 + 1] = lin(y); coords[pending * 3 + 2] = lin(z);
-      pending++;
-      if (pending === BATCH) { await flush(pending, base); base += pending; pending = 0; }
-    }
-    onPhase({ step: "carve", pct: Math.round(((x + 1) / R) * 90) });
-    await new Promise((r) => setTimeout(r, 0));
+    return out[densName].data as Float32Array;
   }
-  if (pending) await flush(pending, base);
+
+  // pass 1: full coarse grid
+  const RC = 64;
+  const coarse = new Float32Array(RC * RC * RC);
+  {
+    const linC = (g: number) => (g / (RC - 1)) * 2 * BOUND - BOUND;
+    const coords = new Float32Array(BATCH * 3);
+    let pending = 0, base = 0;
+    for (let x = 0; x < RC; x++) {
+      for (let y = 0; y < RC; y++) for (let z = 0; z < RC; z++) {
+        coords[pending * 3] = linC(x); coords[pending * 3 + 1] = linC(y); coords[pending * 3 + 2] = linC(z);
+        if (++pending === BATCH) { coarse.set((await queryDensity(coords, pending)).subarray(0, pending), base); base += pending; pending = 0; }
+      }
+      onPhase({ step: "carve", pct: Math.round(((x + 1) / RC) * 25) });
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    if (pending) coarse.set((await queryDensity(coords, pending)).subarray(0, pending), base);
+  }
+
+  // mark coarse cells whose corner range crosses the surface band, dilated by 1
+  const CC = RC - 1;
+  const active = new Uint8Array(CC * CC * CC);
+  const cAt = (x: number, y: number, z: number) => coarse[(x * RC + y) * RC + z];
+  for (let x = 0; x < CC; x++) for (let y = 0; y < CC; y++) for (let z = 0; z < CC; z++) {
+    let mn = Infinity, mx = -Infinity;
+    for (let dx = 0; dx <= 1; dx++) for (let dy = 0; dy <= 1; dy++) for (let dz = 0; dz <= 1; dz++) {
+      const v = cAt(x + dx, y + dy, z + dz);
+      if (v < mn) mn = v; if (v > mx) mx = v;
+    }
+    if (mx >= ISO * 0.4 && mn <= ISO * 2.5) active[(x * CC + y) * CC + z] = 1;
+  }
+  const dilated = new Uint8Array(active);
+  for (let x = 0; x < CC; x++) for (let y = 0; y < CC; y++) for (let z = 0; z < CC; z++) {
+    if (!active[(x * CC + y) * CC + z]) continue;
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
+      const nx = x + dx, ny = y + dy, nz = z + dz;
+      if (nx >= 0 && ny >= 0 && nz >= 0 && nx < CC && ny < CC && nz < CC) dilated[(nx * CC + ny) * CC + nz] = 1;
+    }
+  }
+
+  // pass 2: fine samples only inside active coarse cells
+  const field = new Float32Array(R * R * R); // default 0 = empty space
+  const lin = (g: number) => (g / (R - 1)) * 2 * BOUND - BOUND;
+  const toC = (g: number) => Math.min(CC - 1, Math.floor((g / (R - 1)) * CC));
+  {
+    const coords = new Float32Array(BATCH * 3);
+    const offsets = new Uint32Array(BATCH);
+    let pending = 0;
+    const flush = async () => {
+      if (!pending) return;
+      const d = await queryDensity(coords, pending);
+      for (let i = 0; i < pending; i++) field[offsets[i]] = d[i];
+      pending = 0;
+    };
+    for (let x = 0; x < R; x++) {
+      const cx = toC(x);
+      for (let y = 0; y < R; y++) {
+        const cy = toC(y);
+        for (let z = 0; z < R; z++) {
+          if (!dilated[(cx * CC + cy) * CC + toC(z)]) continue;
+          coords[pending * 3] = lin(x); coords[pending * 3 + 1] = lin(y); coords[pending * 3 + 2] = lin(z);
+          offsets[pending] = (x * R + y) * R + z;
+          if (++pending === BATCH) await flush();
+        }
+      }
+      onPhase({ step: "carve", pct: 25 + Math.round(((x + 1) / R) * 70) });
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    await flush();
+  }
 
   let fMin = Infinity, fMax = -Infinity;
   for (let i = 0; i < field.length; i++) { const v = field[i]; if (v < fMin) fMin = v; if (v > fMax) fMax = v; }
@@ -266,18 +324,87 @@ export async function imageTo3D(
   onPhase({ step: "carve", pct: 100 });
   if (!indices.length) throw new Error("No surface found — try a clearer photo of a single object.");
 
-  // colors at the vertices
+  // Taubin smoothing: kills the voxel-grid staircase without shrinking the
+  // model the way plain Laplacian smoothing would (λ grow, μ shrink pairs).
+  taubinSmooth(positions, indices, 8);
+
+  // colors at the vertices — averaged from the vertex and a point nudged
+  // inside the surface, which is where TripoSR's color field is stable
   onPhase({ step: "paint" });
   const nVerts = positions.length / 3;
+  const normals = vertexNormals(positions, indices);
   const colors = new Float32Array(nVerts * 3);
   const CB = 65536;
-  for (let o = 0; o < nVerts; o += CB) {
-    const count = Math.min(CB, nVerts - o);
-    const pts = new ort.Tensor("float32", positions.subarray(o * 3, (o + count) * 3), [count, 3]);
-    const out = await decoder.run({ [triName]: triplane, [ptsName]: pts });
-    colors.set(out[colName].data.subarray(0, count * 3), o * 3);
+  const sampleColors = async (pts32: Float32Array, into: Float32Array) => {
+    for (let o = 0; o < nVerts; o += CB) {
+      const count = Math.min(CB, nVerts - o);
+      const pts = new ort.Tensor("float32", pts32.subarray(o * 3, (o + count) * 3), [count, 3]);
+      const out = await decoder.run({ [triName]: triplane, [ptsName]: pts });
+      into.set(out[colName].data.subarray(0, count * 3), o * 3);
+    }
+  };
+  await sampleColors(positions, colors);
+  const inner = new Float32Array(nVerts * 3);
+  const nudged = new Float32Array(nVerts * 3);
+  const EPS = (2 * BOUND) / R; // one voxel inward
+  for (let i = 0; i < nVerts * 3; i++) nudged[i] = positions[i] - normals[i] * EPS;
+  await sampleColors(nudged, inner);
+  for (let i = 0; i < colors.length; i++) {
+    colors[i] = Math.min(1, Math.max(0, (colors[i] + inner[i]) * 0.5));
   }
-  for (let i = 0; i < colors.length; i++) colors[i] = Math.min(1, Math.max(0, colors[i]));
 
   return { positions, colors, indices, cutoutUrl };
+}
+
+// ── mesh post-processing helpers ────────────────────────────────────────────
+
+/** Area-weighted vertex normals. */
+function vertexNormals(positions: Float32Array, indices: Uint32Array): Float32Array {
+  const n = new Float32Array(positions.length);
+  for (let t = 0; t < indices.length; t += 3) {
+    const a = indices[t] * 3, b = indices[t + 1] * 3, c = indices[t + 2] * 3;
+    const ux = positions[b] - positions[a], uy = positions[b + 1] - positions[a + 1], uz = positions[b + 2] - positions[a + 2];
+    const vx = positions[c] - positions[a], vy = positions[c + 1] - positions[a + 1], vz = positions[c + 2] - positions[a + 2];
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    for (const i of [a, b, c]) { n[i] += nx; n[i + 1] += ny; n[i + 2] += nz; }
+  }
+  for (let i = 0; i < n.length; i += 3) {
+    const l = Math.hypot(n[i], n[i + 1], n[i + 2]) || 1;
+    n[i] /= l; n[i + 1] /= l; n[i + 2] /= l;
+  }
+  return n;
+}
+
+/** Taubin λ|μ smoothing in place (volume-preserving, unlike pure Laplacian). */
+function taubinSmooth(positions: Float32Array, indices: Uint32Array, iterations: number) {
+  const nV = positions.length / 3;
+  // adjacency
+  const nbr: number[][] = Array.from({ length: nV }, () => []);
+  const seen = new Set<number>();
+  const addEdge = (a: number, b: number) => {
+    const key = a < b ? a * nV + b : b * nV + a;
+    if (seen.has(key)) return;
+    seen.add(key);
+    nbr[a].push(b); nbr[b].push(a);
+  };
+  for (let t = 0; t < indices.length; t += 3) {
+    addEdge(indices[t], indices[t + 1]);
+    addEdge(indices[t + 1], indices[t + 2]);
+    addEdge(indices[t + 2], indices[t]);
+  }
+  const tmp = new Float32Array(positions.length);
+  const pass = (factor: number) => {
+    for (let v = 0; v < nV; v++) {
+      const ns = nbr[v];
+      if (!ns.length) { tmp[v*3]=positions[v*3]; tmp[v*3+1]=positions[v*3+1]; tmp[v*3+2]=positions[v*3+2]; continue; }
+      let ax = 0, ay = 0, az = 0;
+      for (const u of ns) { ax += positions[u*3]; ay += positions[u*3+1]; az += positions[u*3+2]; }
+      ax /= ns.length; ay /= ns.length; az /= ns.length;
+      tmp[v*3]   = positions[v*3]   + factor * (ax - positions[v*3]);
+      tmp[v*3+1] = positions[v*3+1] + factor * (ay - positions[v*3+1]);
+      tmp[v*3+2] = positions[v*3+2] + factor * (az - positions[v*3+2]);
+    }
+    positions.set(tmp);
+  };
+  for (let i = 0; i < iterations; i++) { pass(0.5); pass(-0.53); }
 }
