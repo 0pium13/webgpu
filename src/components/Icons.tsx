@@ -209,6 +209,17 @@ export function EraserIcon(props: IconProps) {
   );
 }
 
+/** Converter — two file shapes trading places in a cycle */
+export function ConvertIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M7.5 9.5v-3a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2" />
+      <rect x="3.5" y="9.5" width="13" height="10" rx="2" />
+      <path d="M8 14.5h4.5M10.75 12.25l2.25 2.25-2.25 2.25" />
+    </Svg>
+  );
+}
+
 /** Auto subtitles — a caption box with text lines */
 export function CaptionsIcon(props: IconProps) {
   return (

@@ -7,6 +7,7 @@ const LINKS = [
   { name: "Image to 3D", href: "/image-to-3d" },
   { name: "Subtitles", href: "/subtitles" },
   { name: "Eraser", href: "/erase" },
+  { name: "Converter", href: "/convert" },
   { name: "GitHub", href: "https://github.com/0pium13/webgpu" },
 ];
 

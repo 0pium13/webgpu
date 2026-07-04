@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/image-to-3d", label: "3D" },
   { href: "/subtitles", label: "Subtitles" },
   { href: "/erase", label: "Eraser" },
+  { href: "/convert", label: "Convert" },
 ];
 
 export default function Nav() {
