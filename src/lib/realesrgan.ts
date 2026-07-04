@@ -25,7 +25,13 @@ const SCALE = 4;
 
 export type SRProgress =
   | { phase: "download"; pct: number }
-  | { phase: "tile"; done: number; total: number; timing: { readbackMs: number; inferenceMs: number; stitchMs: number }; skipped: boolean };
+  | {
+      phase: "tile"; done: number; total: number;
+      timing: { readbackMs: number; inferenceMs: number; stitchMs: number };
+      skipped: boolean;
+      /** the freshly painted tile, for live "developing photo" previews */
+      tile?: { core: HTMLCanvasElement; x: number; y: number; outW: number; outH: number };
+    };
 
 export interface FrameCache {
   tiles: Map<string, { pixels: Uint8ClampedArray; core: HTMLCanvasElement }>;
@@ -182,6 +188,7 @@ export async function upscaleToCanvas(
       onProgress?.({
         phase: "tile", done, total, skipped: unchanged,
         timing: { readbackMs: t1 - t0, inferenceMs: t2 - t1, stitchMs: t3 - t2 },
+        tile: { core: coreCanvas, x: cx * SCALE, y: cy * SCALE, outW: srcW * SCALE, outH: srcH * SCALE },
       });
       await new Promise((r) => setTimeout(r, 0));
     }

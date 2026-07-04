@@ -194,3 +194,13 @@ export function CubeIcon(props: IconProps) {
     </Svg>
   );
 }
+
+/** Auto subtitles — a caption box with text lines */
+export function CaptionsIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="3.5" y="6" width="17" height="12.5" rx="2.5" />
+      <path d="M7 12h4.5M14 12h3M7 15h2M11.5 15h5.5" />
+    </Svg>
+  );
+}
