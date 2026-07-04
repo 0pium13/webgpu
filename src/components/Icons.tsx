@@ -195,6 +195,20 @@ export function CubeIcon(props: IconProps) {
   );
 }
 
+/** Magic eraser — tilted eraser wiping, the removed bits dissolving away */
+export function EraserIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="m4.5 15.5 8-8a2.2 2.2 0 0 1 3.1 0l2.4 2.4a2.2 2.2 0 0 1 0 3.1l-6.5 6.5H8l-3.5-3.5Z" />
+      <path d="m10.5 9.5 5.5 5.5" />
+      <path d="M13 19.5h6.5" />
+      <circle cx="18.6" cy="5.4" r="0.8" fill="currentColor" stroke="none" />
+      <circle cx="21" cy="8" r="0.6" fill="currentColor" stroke="none" opacity="0.6" />
+      <circle cx="20.6" cy="3.2" r="0.5" fill="currentColor" stroke="none" opacity="0.4" />
+    </Svg>
+  );
+}
+
 /** Auto subtitles — a caption box with text lines */
 export function CaptionsIcon(props: IconProps) {
   return (

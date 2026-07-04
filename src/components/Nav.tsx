@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/bg-remove", label: "BG Remover" },
   { href: "/image-to-3d", label: "3D" },
   { href: "/subtitles", label: "Subtitles" },
+  { href: "/erase", label: "Eraser" },
 ];
 
 export default function Nav() {
