@@ -229,6 +229,7 @@ export default function MagicEraserStudio({ file, onReset }: { file: File; onRes
     clearStrokes();
     redraw();
     setCanUndo(historyRef.current.length > 0);
+    scanObjects(); // boxes + SAM embedding must match the restored image
   }
 
   function download() {
@@ -238,6 +239,7 @@ export default function MagicEraserStudio({ file, onReset }: { file: File; onRes
       a.href = URL.createObjectURL(b);
       a.download = `${file.name.replace(/\.[^.]+$/, "")}-erased.png`;
       a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 30_000);
     }, "image/png");
   }
 

@@ -83,6 +83,12 @@ export function whisperDevice() {
 export async function loadWhisper(tier: WhisperTier = "fast", onProgress?: (p: WhisperPhase) => void) {
   const cached = asrCache.get(tier);
   if (cached) return cached;
+  // switching tiers: release the old pipeline's GPU/wasm memory — large-v3-turbo
+  // alone is ~1.6GB, keeping several resident kills small-VRAM machines
+  for (const [t, p] of asrCache) {
+    asrCache.delete(t);
+    p.then((asr) => asr?.dispose?.()).catch(() => {});
+  }
   const { id, dtype } = WHISPER_MODELS[tier];
   const promise = (async () => {
     const tj: any = await import("@huggingface/transformers");
@@ -175,8 +181,10 @@ export async function transcribe(
       // on music/noise ("oooooo…") — collapse absurd runs, drop degenerate lines
       text = text.replace(/(.)\1{5,}/g, "$1$1");
       if (text.length > 400) text = text.slice(0, 400) + "…";
+      // uniq<=2 keeps real degenerate loops ("oo oo oo") out while letting
+      // legitimate repetitive lyrics ("la la la la…", 3 uniques) through
       const uniq = new Set(text.toLowerCase().replace(/\s/g, "")).size;
-      if (text.length > 24 && uniq <= 3) continue;
+      if (text.length > 24 && uniq <= 2) continue;
       const lineStart = offsetSec + (s ?? 0);
       const lineEnd = offsetSec + (e ?? (s ?? 0) + 4);
       // overlap-seam handling: drop lines already fully covered, and if the

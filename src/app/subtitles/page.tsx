@@ -121,11 +121,8 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
       };
 
       const audio = await decodeAudio(input.file);
-      // transformers.js "auto" actually defaults to English, not detection —
-      // for Hinglish the sane assumption is Hindi unless the user says otherwise
-      const effLanguage = output === "hinglish" && language === "auto" ? "hindi" : language;
       const finalLines = await transcribe(audio, onProgress, {
-        tier, language: effLanguage,
+        tier, language,
         translate: output === "english",
         romanize: output === "hinglish",
       });
@@ -205,7 +202,13 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
                 {OUTPUT_STYLES.map((o) => {
                   const active = output === o.id;
                   return (
-                    <button key={o.id} onClick={() => setOutput(o.id)} style={{
+                    <button key={o.id} onClick={() => {
+                      setOutput(o.id);
+                      // Hinglish implies Hindi speech — set it VISIBLY in the
+                      // dropdown (user can change it) instead of forcing it
+                      // silently, which garbled plain-English audio
+                      if (o.id === "hinglish" && language === "auto") setLanguage("hindi");
+                    }} style={{
                       background: active ? "var(--accent-dim)" : "var(--surface-2)",
                       border: active ? "0.5px solid var(--accent)" : "0.5px solid var(--border)",
                       borderRadius: 10, padding: "10px 8px", cursor: "pointer", textAlign: "left",
@@ -220,8 +223,8 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
             {output === "hinglish" && (
               <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: -12, maxWidth: 520 }}>
                 Whisper hears in native script (its most accurate mode) — we convert to
-                Hinglish live. Auto assumes Hindi here; the Accurate and Max models
-                write much cleaner Hindi than Fast.
+                Hinglish live. Check the spoken language above is right; the Accurate
+                and Max models write much cleaner Hindi than Fast.
               </p>
             )}
 

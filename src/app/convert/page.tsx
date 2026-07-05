@@ -8,7 +8,7 @@
  * conversion, in your browser, with nothing leaving the machine.
  */
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Nav from "@/components/Nav";
 import ModelLoader from "@/components/ModelLoader";
 import { ConvertIcon } from "@/components/Icons";
@@ -79,6 +79,14 @@ export default function ConvertPage() {
   const [result, setResult] = useState<{ url: string; name: string; size: number } | null>(null);
   const [engineLoading, setEngineLoading] = useState(false);
   const runId = useRef(0);
+  // the ffmpeg worker is single-threaded and non-reentrant: this stays true
+  // until exec actually settles, so an errored phase can't start a second job
+  const execBusy = useRef(false);
+
+  // converted videos can be GB-class — don't leak the blob if the user
+  // navigates away without hitting "New file"
+  const resultUrl = result?.url;
+  useEffect(() => () => { if (resultUrl) URL.revokeObjectURL(resultUrl); }, [resultUrl]);
 
   function handleFile(f: File) {
     if (!f.type.startsWith("video/") && !f.type.startsWith("audio/"))
@@ -88,8 +96,9 @@ export default function ConvertPage() {
   }
 
   async function run(preset: Preset) {
-    if (!file || phase === "working") return;
+    if (!file || phase === "working" || execBusy.current) return;
     const id = ++runId.current;
+    execBusy.current = true;
     try {
       setPhase("working"); setActive(preset); setPct(0);
       setLogLine("Loading ffmpeg… (~30MB, once)");
@@ -123,6 +132,7 @@ export default function ConvertPage() {
       setErrMsg(e?.message ?? "Conversion failed");
       setPhase("error");
     } finally {
+      execBusy.current = false;
       setEngineLoading(false);
       setFFmpegCallbacks(null, null);
     }

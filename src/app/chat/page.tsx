@@ -110,6 +110,17 @@ export default function ChatPage() {
 
   const model = MODELS.find((m) => m.id === modelId)!;
 
+  async function switchModel() {
+    if (phase === "generating") return;
+    const engine = engineRef.current;
+    engineRef.current = null;
+    setMsgs([]);
+    setTokSec(0);
+    setLoadPct(-1);
+    setPhase("pick");
+    try { await engine?.unload?.(); } catch (e) { console.warn("[chat] unload failed", e); }
+  }
+
   return (
     <div style={{ minHeight: "100vh" }}>
       <Nav />
@@ -222,8 +233,19 @@ export default function ChatPage() {
               )}
             </div>
 
-            <p className="mono" style={{ fontSize: 10.5, color: "var(--text-dim)", padding: "0 16px 10px", display: "flex", justifyContent: "space-between" }}>
-              <span>{model.label} · local</span>
+            <p className="mono" style={{ fontSize: 10.5, color: "var(--text-dim)", padding: "0 16px 10px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                {model.label} · local
+                {phase !== "generating" && (
+                  <button onClick={switchModel} style={{
+                    background: "transparent", border: "0.5px solid var(--border)", borderRadius: 6,
+                    color: "var(--text-muted)", fontSize: 10, padding: "2px 8px", cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}>
+                    switch model
+                  </button>
+                )}
+              </span>
               {tokSec > 0 && <span>{tokSec} tokens/s from your GPU</span>}
             </p>
           </div>
@@ -233,6 +255,7 @@ export default function ChatPage() {
           <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 12 }}>
             <p style={{ color: "#ef4444", fontSize: 13, flex: 1 }}>{errMsg}</p>
             <button onClick={() => (engineRef.current ? setPhase("ready") : setPhase("pick"))} style={{ ...btn }}>Try again</button>
+            <button onClick={switchModel} style={{ ...btn, background: "var(--surface-2)", color: "var(--text)" }}>Pick another model</button>
           </div>
         )}
       </div>
