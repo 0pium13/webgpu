@@ -16,6 +16,14 @@ const TIER_HINTS: Record<WhisperTier, string> = {
   max: "Best possible — every Indian language",
 };
 
+type OutputStyle = "hinglish" | "native" | "english";
+
+const OUTPUT_STYLES: { id: OutputStyle; label: string; hint: string }[] = [
+  { id: "hinglish", label: "Hinglish", hint: "kya kar rahe ho — Roman script" },
+  { id: "native", label: "Native script", hint: "क्या कर रहे हो — as spoken" },
+  { id: "english", label: "English", hint: "translated by Whisper" },
+];
+
 type Phase = "idle" | "working" | "done" | "error";
 type MediaFile = { file: File; url: string };
 
@@ -54,7 +62,8 @@ export default function SubtitlesPage() {
           <p style={{ fontSize: 16, color: "var(--text-muted)", maxWidth: 560, lineHeight: 1.6 }}>
             Drop any video or audio — Whisper transcribes it on your GPU, lines
             appear live as they&apos;re heard, export SRT for any editor.
-            Hindi, Tamil, Telugu, Bengali, Urdu &amp; every Indian language
+            <span style={{ color: "var(--text)" }}> Hinglish captions built in</span> —
+            plus Hindi, Tamil, Telugu, Bengali, Urdu &amp; every Indian language
             Whisper knows. Nothing uploaded.
           </p>
         </div>
@@ -84,7 +93,7 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
   const [errMsg, setErrMsg] = useState("");
   const [tier, setTier] = useState<WhisperTier>("fast");
   const [language, setLanguage] = useState("auto");
-  const [translate, setTranslate] = useState(false);
+  const [output, setOutput] = useState<OutputStyle>("hinglish");
   const linesBox = useRef<HTMLDivElement>(null);
 
   async function start() {
@@ -109,7 +118,14 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
       };
 
       const audio = await decodeAudio(input.file);
-      const finalLines = await transcribe(audio, onProgress, { tier, language, translate });
+      // transformers.js "auto" actually defaults to English, not detection —
+      // for Hinglish the sane assumption is Hindi unless the user says otherwise
+      const effLanguage = output === "hinglish" && language === "auto" ? "hindi" : language;
+      const finalLines = await transcribe(audio, onProgress, {
+        tier, language: effLanguage,
+        translate: output === "english",
+        romanize: output === "hinglish",
+      });
       setLines(finalLines);
       setPct(100);
       setPhase("done");
@@ -167,30 +183,42 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
               </div>
             </div>
 
-            {/* language + translate */}
-            <div style={{ width: "100%", maxWidth: 520, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
-              <div style={{ flex: "1 1 220px" }}>
-                <p className="mono" style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: 8 }}>Spoken language</p>
-                <select value={language} onChange={(e) => setLanguage(e.target.value)} style={{
-                  width: "100%", background: "var(--surface-2)", color: "var(--text)",
-                  border: "0.5px solid var(--border)", borderRadius: 10, padding: "10px 12px",
-                  fontSize: 13.5, cursor: "pointer", appearance: "none",
-                }}>
-                  {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
-                </select>
-              </div>
-              <button onClick={() => setTranslate(!translate)} style={{
-                background: translate ? "var(--accent-dim)" : "var(--surface-2)",
-                border: translate ? "0.5px solid var(--accent)" : "0.5px solid var(--border)",
-                borderRadius: 10, padding: "10px 14px", fontSize: 13, cursor: "pointer",
-                color: translate ? "var(--accent)" : "var(--text-muted)", whiteSpace: "nowrap",
+            {/* language */}
+            <div style={{ width: "100%", maxWidth: 520 }}>
+              <p className="mono" style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: 8 }}>Spoken language</p>
+              <select value={language} onChange={(e) => setLanguage(e.target.value)} style={{
+                width: "100%", background: "var(--surface-2)", color: "var(--text)",
+                border: "0.5px solid var(--border)", borderRadius: 10, padding: "10px 12px",
+                fontSize: 13.5, cursor: "pointer", appearance: "none",
               }}>
-                {translate ? "✓ " : ""}Translate to English
-              </button>
+                {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+              </select>
             </div>
-            {language !== "auto" && !translate && (
-              <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: -12 }}>
-                Subtitles will be in native script — picking the language beats auto-detect for accuracy.
+
+            {/* output style — Hinglish is the whole point for Indian creators */}
+            <div style={{ width: "100%", maxWidth: 520 }}>
+              <p className="mono" style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: 8 }}>Subtitle style</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                {OUTPUT_STYLES.map((o) => {
+                  const active = output === o.id;
+                  return (
+                    <button key={o.id} onClick={() => setOutput(o.id)} style={{
+                      background: active ? "var(--accent-dim)" : "var(--surface-2)",
+                      border: active ? "0.5px solid var(--accent)" : "0.5px solid var(--border)",
+                      borderRadius: 10, padding: "10px 8px", cursor: "pointer", textAlign: "left",
+                    }}>
+                      <span style={{ display: "block", fontSize: 13, fontWeight: 500, color: active ? "var(--accent)" : "var(--text)" }}>{o.label}</span>
+                      <span style={{ display: "block", fontSize: 11, color: "var(--text-muted)", marginTop: 3, lineHeight: 1.35 }}>{o.hint}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {output === "hinglish" && (
+              <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: -12, maxWidth: 520 }}>
+                Whisper hears in native script (its most accurate mode) — we convert to
+                Hinglish live. Auto assumes Hindi here; the Accurate and Max models
+                write much cleaner Hindi than Fast.
               </p>
             )}
 

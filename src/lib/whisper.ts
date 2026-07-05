@@ -56,6 +56,8 @@ export const LANGUAGES: { code: string; label: string }[] = [
   { code: "indonesian", label: "Indonesian" },
 ];
 
+import { toHinglish } from "./hinglish";
+
 const SAMPLE_RATE = 16000;
 const WINDOW_S = 28;
 const OVERLAP_S = 2;
@@ -135,6 +137,10 @@ export interface TranscribeOptions {
   language?: string;
   /** true = translate everything to English instead of native-script output */
   translate?: boolean;
+  /** true = Hinglish: Whisper transcribes natively (its most accurate mode),
+   *  we romanize Devanagari to chat-style Latin. Latin text passes through,
+   *  so it's safe to leave on for English / code-switched audio. */
+  romanize?: boolean;
 }
 
 /** Transcribe with live per-window streaming. Returns the final line list. */
@@ -162,8 +168,9 @@ export async function transcribe(
 
     for (const c of rawChunks) {
       const [s, e] = c.timestamp ?? [0, null];
-      const text = String(c.text ?? "").trim();
+      let text = String(c.text ?? "").trim();
       if (!text) continue;
+      if (opts.romanize) text = toHinglish(text);
       const lineStart = offsetSec + (s ?? 0);
       const lineEnd = offsetSec + (e ?? (s ?? 0) + 4);
       // overlap-seam handling: drop lines already fully covered, and if the

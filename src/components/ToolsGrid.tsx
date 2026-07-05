@@ -8,7 +8,7 @@ const TOOLS = [
   { href: "/rotoscope", Icon: RotoscopeIcon, name: "Rotoscope", desc: "Cut out and track any object, even in video." },
   { href: "/bg-remove", Icon: BgRemoveIcon, name: "Background Remover", desc: "Instant, clean edges. One click." },
   { href: "/image-to-3d", Icon: CubeIcon, name: "Image to 3D", desc: "One photo becomes a real 3D model. Export GLB, OBJ, STL." },
-  { href: "/subtitles", Icon: CaptionsIcon, name: "Auto Subtitles", desc: "Hindi, Tamil, Telugu + 25 more. Live, on your GPU." },
+  { href: "/subtitles", Icon: CaptionsIcon, name: "Auto Subtitles", desc: "Hinglish captions + 27 languages. Live, on your GPU." },
   { href: "/erase", Icon: EraserIcon, name: "Magic Eraser", desc: "Paint over anything. AI rebuilds what was behind it." },
   { href: "/convert", Icon: ConvertIcon, name: "Converter", desc: "MP4, MP3, GIF, compress. No upload sites, no ads." },
   { href: "/chat", Icon: ChatIcon, name: "Local AI Chat", desc: "A real LLM on your GPU. Works offline, keeps secrets." },
