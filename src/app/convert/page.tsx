@@ -10,6 +10,7 @@
 
 import { useRef, useState } from "react";
 import Nav from "@/components/Nav";
+import ModelLoader from "@/components/ModelLoader";
 import { ConvertIcon } from "@/components/Icons";
 import { getFFmpeg, setFFmpegCallbacks, fileToUint8 } from "@/lib/ffmpeg";
 
@@ -76,6 +77,7 @@ export default function ConvertPage() {
   const [logLine, setLogLine] = useState("");
   const [errMsg, setErrMsg] = useState("");
   const [result, setResult] = useState<{ url: string; name: string; size: number } | null>(null);
+  const [engineLoading, setEngineLoading] = useState(false);
   const runId = useRef(0);
 
   function handleFile(f: File) {
@@ -93,7 +95,9 @@ export default function ConvertPage() {
       setLogLine("Loading ffmpeg… (~30MB, once)");
       if (result) { URL.revokeObjectURL(result.url); setResult(null); }
 
+      setEngineLoading(true);
       const ff = await getFFmpeg();
+      setEngineLoading(false);
       setFFmpegCallbacks(
         (m) => { if (runId.current === id && m && !m.startsWith("frame=")) setLogLine(m.slice(0, 120)); },
         (p) => { if (runId.current === id) setPct(Math.min(99, Math.round(p * 100))); }
@@ -119,6 +123,7 @@ export default function ConvertPage() {
       setErrMsg(e?.message ?? "Conversion failed");
       setPhase("error");
     } finally {
+      setEngineLoading(false);
       setFFmpegCallbacks(null, null);
     }
   }
@@ -176,7 +181,12 @@ export default function ConvertPage() {
               })}
             </div>
 
-            {busy && (
+            {busy && engineLoading && (
+              <div style={{ background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+                <ModelLoader pct={-1} title="The converter is waking up" sub="~31MB · downloads once, cached forever" />
+              </div>
+            )}
+            {busy && !engineLoading && (
               <div style={{ background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 12, padding: "14px 18px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
                   <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--accent)", animation: "pulse 1s ease-in-out infinite", flexShrink: 0 }} />

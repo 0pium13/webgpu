@@ -4,14 +4,14 @@ import { useCallback } from "react";
 import { UpscaleIcon, RotoscopeIcon, BgRemoveIcon, CubeIcon, CaptionsIcon, EraserIcon, ConvertIcon, ChatIcon } from "./Icons";
 
 const TOOLS = [
-  { href: "/upscale", Icon: UpscaleIcon, name: "Upscaler", desc: "Real AI detail reconstruction. Up to 4K." },
-  { href: "/rotoscope", Icon: RotoscopeIcon, name: "Rotoscope", desc: "Cut out and track any object, even in video." },
-  { href: "/bg-remove", Icon: BgRemoveIcon, name: "Background Remover", desc: "Instant, clean edges. One click." },
-  { href: "/image-to-3d", Icon: CubeIcon, name: "Image to 3D", desc: "One photo becomes a real 3D model. Export GLB, OBJ, STL." },
-  { href: "/subtitles", Icon: CaptionsIcon, name: "Auto Subtitles", desc: "Hinglish captions + 27 languages. Live, on your GPU." },
-  { href: "/erase", Icon: EraserIcon, name: "Magic Eraser", desc: "Paint over anything. AI rebuilds what was behind it." },
-  { href: "/convert", Icon: ConvertIcon, name: "Converter", desc: "MP4, MP3, GIF, compress. No upload sites, no ads." },
-  { href: "/chat", Icon: ChatIcon, name: "Local AI Chat", desc: "A real LLM on your GPU. Works offline, keeps secrets." },
+  { href: "/upscale", Icon: UpscaleIcon, name: "Upscaler", desc: "Real AI detail reconstruction. Up to 4K.", tint: "#818cf8" },
+  { href: "/rotoscope", Icon: RotoscopeIcon, name: "Rotoscope", desc: "Cut out and track any object, even in video.", tint: "#a78bfa" },
+  { href: "/bg-remove", Icon: BgRemoveIcon, name: "Background Remover", desc: "Instant, clean edges. One click.", tint: "#34d399" },
+  { href: "/image-to-3d", Icon: CubeIcon, name: "Image to 3D", desc: "One photo becomes a real 3D model. Export GLB, OBJ, STL.", tint: "#fbbf24" },
+  { href: "/subtitles", Icon: CaptionsIcon, name: "Auto Subtitles", desc: "Hinglish captions + 27 languages. Live, on your GPU.", tint: "#22d3ee" },
+  { href: "/erase", Icon: EraserIcon, name: "Magic Eraser", desc: "Paint over anything. AI rebuilds what was behind it.", tint: "#fb7185" },
+  { href: "/convert", Icon: ConvertIcon, name: "Converter", desc: "MP4, MP3, GIF, compress. No upload sites, no ads.", tint: "#a3e635" },
+  { href: "/chat", Icon: ChatIcon, name: "Local AI Chat", desc: "A real LLM on your GPU. Works offline, keeps secrets.", tint: "#38bdf8" },
 ];
 
 export default function ToolsGrid() {
@@ -30,9 +30,10 @@ export default function ToolsGrid() {
             key={t.href}
             href={t.href}
             onMouseMove={track}
-            className="spotlight group block rounded-2xl border border-line bg-surface p-6 no-underline transition-[border-color,transform,box-shadow] duration-300 ease-[var(--ease-lux)] hover:-translate-y-0.5 hover:border-line-strong hover:shadow-[0_12px_40px_-16px_rgba(99,102,241,0.25)] active:translate-y-0 active:scale-[0.99]"
+            style={{ "--tint": t.tint } as React.CSSProperties}
+            className="spotlight tool-card group block rounded-2xl border border-line bg-surface p-6 no-underline transition-[border-color,transform,box-shadow] duration-300 ease-[var(--ease-lux)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99]"
           >
-            <span className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl border border-line bg-surface-2 text-fg-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-[transform,color] duration-300 ease-[var(--ease-spring)] group-hover:scale-110 group-hover:text-accent">
+            <span className="tool-icon mb-5 flex h-11 w-11 items-center justify-center rounded-xl border border-line bg-surface-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-[transform,color] duration-300 ease-[var(--ease-spring)] group-hover:scale-110">
               <t.Icon size={22} />
             </span>
 

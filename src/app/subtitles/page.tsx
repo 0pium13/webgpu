@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Nav from "@/components/Nav";
+import ModelLoader from "@/components/ModelLoader";
 import { useGPU } from "@/lib/useGPU";
 import { CaptionsIcon, SparkleIcon } from "@/components/Icons";
 import {
@@ -62,7 +63,7 @@ export default function SubtitlesPage() {
           <p style={{ fontSize: 16, color: "var(--text-muted)", maxWidth: 560, lineHeight: 1.6 }}>
             Drop any video or audio — Whisper transcribes it on your GPU, lines
             appear live as they&apos;re heard, export SRT for any editor.
-            <span style={{ color: "var(--text)" }}> Hinglish captions built in</span> —
+            <span style={{ color: "var(--text)" }}> Hinglish captions built in,</span>{" "}
             plus Hindi, Tamil, Telugu, Bengali, Urdu &amp; every Indian language
             Whisper knows. Nothing uploaded.
           </p>
@@ -94,6 +95,7 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
   const [tier, setTier] = useState<WhisperTier>("fast");
   const [language, setLanguage] = useState("auto");
   const [output, setOutput] = useState<OutputStyle>("hinglish");
+  const [downloading, setDownloading] = useState(false);
   const linesBox = useRef<HTMLDivElement>(null);
 
   async function start() {
@@ -104,9 +106,10 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
       setPct(0);
 
       const onProgress = (p: WhisperPhase) => {
-        if (p.step === "download") { setMsg(`Loading Whisper… ${p.pct}%`); setPct(p.pct); }
+        if (p.step === "download") { setMsg(`Loading Whisper… ${p.pct}%`); setPct(p.pct); setDownloading(true); }
         else if (p.step === "decode") { setMsg("Reading audio…"); setPct(0); }
         else {
+          setDownloading(false);
           setMsg(`Listening… ${fmtT(p.doneSec)} / ${fmtT(p.totalSec)}`);
           setPct(Math.min(99, Math.round((p.doneSec / p.totalSec) * 100)));
           setLines(p.lines);
@@ -244,7 +247,15 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
               </div>
             ))}
             {busy && lines.length === 0 && (
-              <p style={{ fontSize: 13, color: "var(--text-muted)", padding: "40px 0", textAlign: "center" }}>{msg}</p>
+              downloading ? (
+                <ModelLoader
+                  pct={pct}
+                  title={`Whisper ${WHISPER_MODELS[tier].label} is waking up`}
+                  sub={`${WHISPER_MODELS[tier].size} · downloads once, cached forever`}
+                />
+              ) : (
+                <p style={{ fontSize: 13, color: "var(--text-muted)", padding: "40px 0", textAlign: "center" }}>{msg}</p>
+              )
             )}
           </div>
         )}

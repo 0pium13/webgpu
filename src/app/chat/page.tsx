@@ -10,6 +10,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Nav from "@/components/Nav";
+import ModelLoader from "@/components/ModelLoader";
 import { ChatIcon, SparkleIcon } from "@/components/Icons";
 
 const MODELS = [
@@ -41,6 +42,7 @@ export default function ChatPage() {
   const [phase, setPhase] = useState<Phase>("pick");
   const [modelId, setModelId] = useState(MODELS[0].id);
   const [loadMsg, setLoadMsg] = useState("");
+  const [loadPct, setLoadPct] = useState(-1);
   const [errMsg, setErrMsg] = useState("");
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [draft, setDraft] = useState("");
@@ -59,7 +61,10 @@ export default function ChatPage() {
       setLoadMsg("Preparing…");
       const webllm = await import("@mlc-ai/web-llm");
       engineRef.current = await webllm.CreateMLCEngine(modelId, {
-        initProgressCallback: (p: { text: string }) => setLoadMsg(p.text),
+        initProgressCallback: (p: { text: string; progress?: number }) => {
+          setLoadMsg(p.text);
+          setLoadPct(typeof p.progress === "number" && p.progress > 0 ? Math.round(p.progress * 100) : -1);
+        },
       });
       setPhase("ready");
     } catch (e: any) {
@@ -164,10 +169,13 @@ export default function ChatPage() {
         )}
 
         {phase === "loading" && (
-          <div style={{ background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 16, padding: "48px 32px", textAlign: "center" }}>
-            <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: "var(--accent)", animation: "pulse 1s ease-in-out infinite", marginBottom: 16 }} />
-            <p style={{ fontSize: 14, marginBottom: 6 }}>Waking up {model.label}…</p>
-            <p className="mono" style={{ fontSize: 11.5, color: "var(--text-muted)", maxWidth: 480, margin: "0 auto", lineHeight: 1.6 }}>{loadMsg}</p>
+          <div style={{ background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 16, overflow: "hidden" }}>
+            <ModelLoader
+              pct={loadPct}
+              title={`${model.label} is waking up`}
+              sub={`${model.size} · downloads once, cached forever`}
+            />
+            <p className="mono" style={{ fontSize: 10.5, color: "var(--text-dim)", textAlign: "center", padding: "0 24px 16px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{loadMsg}</p>
           </div>
         )}
 

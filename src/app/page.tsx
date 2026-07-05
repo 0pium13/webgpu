@@ -3,6 +3,7 @@
 import Nav from "@/components/Nav";
 import Hero from "@/components/Hero";
 import ToolsGrid from "@/components/ToolsGrid";
+import ValueStrip from "@/components/ValueStrip";
 import Footer from "@/components/Footer";
 import Reveal from "@/components/Reveal";
 
@@ -12,6 +13,7 @@ export default function Home() {
       <Nav />
       <Hero />
       <Reveal><ToolsGrid /></Reveal>
+      <Reveal><ValueStrip /></Reveal>
       <Footer />
     </main>
   );

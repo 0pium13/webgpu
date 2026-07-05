@@ -38,7 +38,7 @@ export default function Nav() {
             <a
               key={l.href}
               href={l.href}
-              className={`rounded-lg px-3 py-1.5 text-[13px] font-medium no-underline transition-colors duration-200 ${
+              className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] font-medium no-underline transition-colors duration-200 ${
                 active
                   ? "bg-white/[0.06] text-fg"
                   : "text-muted-fg hover:bg-white/[0.04] hover:text-fg"

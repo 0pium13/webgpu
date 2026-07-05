@@ -171,6 +171,12 @@ export async function transcribe(
       let text = String(c.text ?? "").trim();
       if (!text) continue;
       if (opts.romanize) text = toHinglish(text);
+      // repetition-loop guard: greedy whisper sometimes locks onto one token
+      // on music/noise ("oooooo…") — collapse absurd runs, drop degenerate lines
+      text = text.replace(/(.)\1{5,}/g, "$1$1");
+      if (text.length > 400) text = text.slice(0, 400) + "…";
+      const uniq = new Set(text.toLowerCase().replace(/\s/g, "")).size;
+      if (text.length > 24 && uniq <= 3) continue;
       const lineStart = offsetSec + (s ?? 0);
       const lineEnd = offsetSec + (e ?? (s ?? 0) + 4);
       // overlap-seam handling: drop lines already fully covered, and if the

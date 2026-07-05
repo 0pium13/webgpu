@@ -70,6 +70,61 @@ body::before {
   z-index: 0;
 }
 
+/* ── ambient color field — the whole site sits inside a slow-breathing
+      gradient atmosphere instead of a flat black void. Three color pools
+      (indigo / violet / cyan) drift over ~90s; a faint dot lattice gives the
+      dark areas texture. Pure CSS, one fixed element, transform+opacity only. */
+.bg-field {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  overflow: hidden;
+}
+.bg-field::before {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(42% 34% at 18% 12%, rgba(99, 102, 241, 0.11), transparent 70%),
+    radial-gradient(36% 30% at 85% 26%, rgba(139, 92, 246, 0.08), transparent 70%),
+    radial-gradient(44% 38% at 68% 88%, rgba(34, 211, 238, 0.05), transparent 70%),
+    radial-gradient(30% 26% at 8% 78%, rgba(236, 72, 153, 0.04), transparent 70%);
+  animation: field-drift 90s ease-in-out infinite alternate;
+}
+.bg-field::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(75% 60% at 50% 38%, black, transparent);
+}
+@keyframes field-drift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(2.5%, -2%, 0) scale(1.05); }
+  100% { transform: translate3d(-2%, 2.5%, 0) scale(1.02); }
+}
+
+/* eraser detection boxes — quiet until you look at them */
+.det-box { transition: background 0.18s ease, border-color 0.18s ease; }
+.det-box:hover {
+  background: rgba(99, 102, 241, 0.16) !important;
+  border-color: var(--accent) !important;
+}
+
+/* per-tool identity color — the grid reads like a spectrum, not a monolith */
+.tool-card .tool-icon {
+  color: color-mix(in srgb, var(--tint, var(--accent)) 62%, var(--text-secondary));
+}
+.tool-card:hover .tool-icon {
+  color: var(--tint, var(--accent));
+}
+.tool-card:hover {
+  border-color: color-mix(in srgb, var(--tint, var(--accent)) 32%, transparent);
+  box-shadow: 0 12px 44px -14px color-mix(in srgb, var(--tint, var(--accent)) 32%, transparent);
+}
+
 /* ambient aurora behind the hero — one soft indigo pool, nothing loud */
 .aurora {
   position: absolute;

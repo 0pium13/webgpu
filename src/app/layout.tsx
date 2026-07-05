@@ -27,7 +27,17 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body>{children}</body>
+      <head>
+        {/* models & runtimes come from these hosts — shave the handshake */}
+        <link rel="preconnect" href="https://huggingface.co" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://unpkg.com" />
+        <link rel="dns-prefetch" href="https://cas-bridge.xethub.hf.co" />
+      </head>
+      <body>
+        <div className="bg-field" aria-hidden />
+        {children}
+      </body>
     </html>
   );
 }
