@@ -17,22 +17,25 @@ import ModelLoader from "@/components/ModelLoader";
 import { useGPU } from "@/lib/useGPU";
 import { SparkleIcon, VoiceIcon } from "@/components/Icons";
 
+// Kokoro's v1.0 ONNX release ships English only — these ids are the ones the
+// engine actually has. (The Hindi/multilingual voices exist upstream but have
+// no browser export yet; that slot is what voice cloning will fill.)
 const VOICES = [
   { id: "af_heart", label: "Heart", lang: "English (US)", g: "F", star: true },
   { id: "af_bella", label: "Bella", lang: "English (US)", g: "F" },
+  { id: "af_nicole", label: "Nicole", lang: "English (US)", g: "F" },
+  { id: "af_sky", label: "Sky", lang: "English (US)", g: "F" },
+  { id: "af_nova", label: "Nova", lang: "English (US)", g: "F" },
   { id: "am_michael", label: "Michael", lang: "English (US)", g: "M" },
   { id: "am_fenrir", label: "Fenrir", lang: "English (US)", g: "M" },
-  { id: "bf_emma", label: "Emma", lang: "English (UK)", g: "F" },
+  { id: "am_puck", label: "Puck", lang: "English (US)", g: "M" },
+  { id: "am_onyx", label: "Onyx", lang: "English (US)", g: "M" },
+  { id: "bf_emma", label: "Emma", lang: "English (UK)", g: "F", star: true },
+  { id: "bf_isabella", label: "Isabella", lang: "English (UK)", g: "F" },
+  { id: "bf_lily", label: "Lily", lang: "English (UK)", g: "F" },
   { id: "bm_george", label: "George", lang: "English (UK)", g: "M" },
-  { id: "hf_alpha", label: "Alpha", lang: "Hindi", g: "F", star: true },
-  { id: "hf_beta", label: "Beta", lang: "Hindi", g: "F" },
-  { id: "hm_omega", label: "Omega", lang: "Hindi", g: "M" },
-  { id: "hm_psi", label: "Psi", lang: "Hindi", g: "M" },
-  { id: "ef_dora", label: "Dora", lang: "Spanish", g: "F" },
-  { id: "ff_siwis", label: "Siwis", lang: "French", g: "F" },
-  { id: "jf_alpha", label: "Alpha", lang: "Japanese", g: "F" },
-  { id: "zf_xiaobei", label: "Xiaobei", lang: "Chinese", g: "F" },
-  { id: "im_nicola", label: "Nicola", lang: "Italian", g: "M" },
+  { id: "bm_daniel", label: "Daniel", lang: "English (UK)", g: "M" },
+  { id: "bm_fable", label: "Fable", lang: "English (UK)", g: "M" },
 ];
 
 type Phase = "idle" | "loading" | "ready" | "generating" | "error";
@@ -155,9 +158,8 @@ export default function VoicePage() {
             Voice Studio
           </h1>
           <p style={{ fontSize: 16, color: "var(--text-muted)", maxWidth: 560, lineHeight: 1.6 }}>
-            Studio-grade text-to-speech on your own GPU — English, Hindi and
-            more. Voiceovers for reels, videos, apps. No credits, no character
-            limits, nothing uploaded.
+            Studio-grade text-to-speech on your own GPU. Voiceovers for reels,
+            videos, apps — no credits, no character limits, nothing uploaded.
           </p>
         </div>
 
@@ -200,7 +202,7 @@ export default function VoicePage() {
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={voice.startsWith("h") ? "यहाँ लिखो — hf_alpha हिन्दी बोलती है… (Devanagari works best for Hindi voices)" : "Type what you want spoken…"}
+            placeholder="Type what you want spoken…"
             rows={5}
             style={{
               width: "100%", resize: "vertical", background: "var(--surface)", color: "var(--text)",
