@@ -3,13 +3,15 @@
 import { usePathname } from "next/navigation";
 
 const LINKS = [
-  { href: "/upscale", label: "Upscaler" },
-  { href: "/rotoscope", label: "Rotoscope" },
-  { href: "/bg-remove", label: "BG Remover" },
+  { href: "/upscale", label: "Upscale" },
+  { href: "/rotoscope", label: "Roto" },
+  { href: "/bg-remove", label: "BG" },
   { href: "/image-to-3d", label: "3D" },
-  { href: "/subtitles", label: "Subtitles" },
-  { href: "/erase", label: "Eraser" },
+  { href: "/subtitles", label: "Subs" },
+  { href: "/erase", label: "Erase" },
   { href: "/convert", label: "Convert" },
+  { href: "/pdf", label: "PDF" },
+  { href: "/voice", label: "Voice" },
   { href: "/chat", label: "Chat" },
 ];
 

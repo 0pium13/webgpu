@@ -195,6 +195,27 @@ export function CubeIcon(props: IconProps) {
   );
 }
 
+/** PDF studio — a document with a folded corner and page-surgery marks */
+export function PdfIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M6 3.5h8.5L19 8v10.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z" />
+      <path d="M14.5 3.5V8H19" />
+      <path d="M7.5 12.5h8M7.5 15.5h5" />
+      <circle cx="16.5" cy="15.5" r="0.7" fill="currentColor" stroke="none" />
+    </Svg>
+  );
+}
+
+/** Voice studio — a waveform finding its shape */
+export function VoiceIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M3.5 10.5v3M6.5 8v8M9.5 5.5v13M12.5 9v6M15.5 6.5v11M18.5 9.5v5M21 11v2" />
+    </Svg>
+  );
+}
+
 /** Magic eraser — tilted eraser wiping, the removed bits dissolving away */
 export function EraserIcon(props: IconProps) {
   return (

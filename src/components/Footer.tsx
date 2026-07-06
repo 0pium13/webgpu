@@ -8,6 +8,8 @@ const LINKS = [
   { name: "Subtitles", href: "/subtitles" },
   { name: "Eraser", href: "/erase" },
   { name: "Converter", href: "/convert" },
+  { name: "PDF", href: "/pdf" },
+  { name: "Voice", href: "/voice" },
   { name: "AI Chat", href: "/chat" },
   { name: "GitHub", href: "https://github.com/0pium13/webgpu" },
 ];
