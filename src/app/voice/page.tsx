@@ -14,6 +14,7 @@
 import { useRef, useState } from "react";
 import Nav from "@/components/Nav";
 import ModelLoader from "@/components/ModelLoader";
+import CloneStudio from "@/components/voice/CloneStudio";
 import { useGPU } from "@/lib/useGPU";
 import { SparkleIcon, VoiceIcon } from "@/components/Icons";
 
@@ -96,6 +97,7 @@ function loadTTS(onPct: (p: number) => void): Promise<any> {
 
 export default function VoicePage() {
   const gpu = useGPU();
+  const [mode, setMode] = useState<"studio" | "clone">("studio");
   const [phase, setPhase] = useState<Phase>("idle");
   const [voice, setVoice] = useState("af_heart");
   const [text, setText] = useState("");
@@ -163,7 +165,29 @@ export default function VoicePage() {
           </p>
         </div>
 
-        {phase === "idle" && (
+        {/* mode tabs */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 22 }}>
+          {([
+            { id: "studio", label: "Studio voices", hint: "15 polished voices" },
+            { id: "clone", label: "Clone a voice", hint: "from your reference clip" },
+          ] as const).map((m) => {
+            const active = mode === m.id;
+            return (
+              <button key={m.id} onClick={() => setMode(m.id)} style={{
+                background: active ? "var(--accent-dim)" : "var(--surface)",
+                border: active ? "0.5px solid var(--accent)" : "0.5px solid var(--border)",
+                borderRadius: 12, padding: "10px 18px", cursor: "pointer", textAlign: "left",
+              }}>
+                <span style={{ display: "block", fontSize: 14, fontWeight: 500, color: active ? "var(--accent)" : "var(--text)" }}>{m.label}</span>
+                <span style={{ display: "block", fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{m.hint}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {mode === "clone" && <CloneStudio />}
+
+        {mode === "studio" && phase === "idle" && (
           <div style={{ display: "flex", alignItems: "center", gap: 14, background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 12, padding: "14px 18px", marginBottom: 20 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: gpu.supported ? "var(--green)" : "var(--amber)", flexShrink: 0 }} />
             <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
@@ -172,7 +196,7 @@ export default function VoicePage() {
           </div>
         )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ display: mode === "studio" ? "flex" : "none", flexDirection: "column", gap: 16 }}>
           {/* voice picker */}
           <div>
             <p className="mono" style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: 8 }}>Voice</p>
@@ -249,9 +273,8 @@ export default function VoicePage() {
           )}
 
           <p className="mono" style={{ fontSize: 11, color: "var(--text-dim)", lineHeight: 1.7 }}>
-            Voice cloning from your own reference audio isn&apos;t here yet — the
-            in-browser encoder for it doesn&apos;t exist anywhere. We&apos;re building
-            it rather than faking it with presets.
+            Want it in a specific person&apos;s voice? Switch to Clone a voice —
+            we built the in-browser encoder for it because none existed.
           </p>
         </div>
       </div>

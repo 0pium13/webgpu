@@ -34,6 +34,7 @@
     "@webgpu/types": "^0.1.71",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
+    "onnxruntime-node": "^1.27.0",
     "tailwindcss": "^4",
     "typescript": "^5.9.3"
   }

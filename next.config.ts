@@ -28,6 +28,13 @@ const CSP = [
 const nextConfig: NextConfig = {
   // transformers.js / onnxruntime-web ship server-only fallbacks we don't bundle
   serverExternalPackages: ["@huggingface/transformers"],
+  // outetts has a dead `await import("fs")` branch for Node — stub it out so
+  // Turbopack can bundle the browser path
+  turbopack: {
+    resolveAlias: {
+      fs: { browser: "./src/lib/empty.ts" },
+    },
+  },
   // Note: single-threaded ffmpeg core is used, so no cross-origin isolation
   // (COOP/COEP) is required — and omitting it lets transformers.js load
   // models + wasm from the HuggingFace / jsDelivr CDNs without CORP errors.
