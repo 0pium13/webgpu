@@ -34,6 +34,10 @@ export interface EnhanceSettings {
   temporal: number;   // temporal (multi-frame) — the real "no noise" lever
   sharpen: number;
   clarity: number;
+  contrast: number;   // 1.0 = none
+  vibrance: number;   // 1.0 = none (color pop)
+  bgBlur: number;     // 0..1 background blur strength (DSLR bokeh)
+  bypass: boolean;    // hold-to-compare: show the raw feed
   outputRes: OutputRes;
   beautifyOn: boolean;
   smooth: number;
@@ -93,10 +97,11 @@ void main(){
 const COMPOSITE_FRAG = `#version 300 es
 precision highp float;
 in vec2 v_uv;
-uniform sampler2D u_frame, u_blur, u_mask;
+uniform sampler2D u_frame, u_blur, u_mask, u_bokeh, u_person;
 uniform vec2 u_texel;
-uniform bool u_enhance, u_beautify, u_mirror;
+uniform bool u_enhance, u_beautify, u_mirror, u_bypass;
 uniform float u_exposure, u_shadow, u_denoise, u_sharpen, u_clarity;
+uniform float u_contrast, u_vibrance, u_bgblur;
 uniform float u_smooth, u_even, u_eye;
 uniform vec3 u_wb;
 uniform vec4 u_crop;
@@ -107,6 +112,7 @@ void main(){
   if (u_mirror) uv.x = 1.0 - uv.x;
   uv = u_crop.xy + uv * u_crop.zw;
   vec3 center = texture(u_frame, uv).rgb;
+  if (u_bypass) { o = vec4(center, 1.0); return; }   // hold-to-compare: raw
   vec3 c = center;
   if (u_enhance) {
     vec3 avg = vec3(0.0);
@@ -137,6 +143,18 @@ void main(){
     c = low + hi * (1.0 - u_smooth * skin * flatW2);
     vec3 bright = clamp((c - 0.5) * 1.12 + 0.5 + 0.06, 0.0, 1.0);
     c = mix(c, bright, u_eye * eye);
+  }
+  // colour grade — the "punch": S-curve contrast + vibrance
+  c = clamp((c - 0.5) * u_contrast + 0.5, 0.0, 1.0);
+  float lc = luma(c);
+  c = clamp(mix(vec3(lc), c, u_vibrance), 0.0, 1.0);
+  // DSLR bokeh — keep the person sharp, blur + gently deepen the background
+  if (u_bgblur > 0.0) {
+    float person = texture(u_person, uv).r;
+    vec3 bg = texture(u_bokeh, uv).rgb;
+    bg = mix(vec3(luma(bg)), bg, 0.88) * 0.94;         // subtle desaturate + darken for depth
+    float m = smoothstep(0.45, 0.6, person);           // soft subject edge
+    c = mix(mix(c, bg, u_bgblur), c, m);
   }
   o = vec4(clamp(c, 0.0, 1.0), 1.0);
 }`;
@@ -185,8 +203,12 @@ export class WebcamEngine {
   private mask!: { tex: WebGLTexture; fbo: WebGLFramebuffer };
   private histA!: { tex: WebGLTexture; fbo: WebGLFramebuffer };
   private histB!: { tex: WebGLTexture; fbo: WebGLFramebuffer };
+  private bokehA!: { tex: WebGLTexture; fbo: WebGLFramebuffer };
+  private bokehB!: { tex: WebGLTexture; fbo: WebGLFramebuffer };
+  private personTex: WebGLTexture;
   private histSwap = false;
   private pw = 0; private ph = 0;   // processing resolution
+  private bw = 0; private bh = 0;   // bokeh (half) resolution
   private ow = 0; private oh = 0;   // output (canvas) resolution
 
   constructor(canvas: HTMLCanvasElement) {
@@ -201,23 +223,33 @@ export class WebcamEngine {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.quad);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
     this.maskBuf = gl.createBuffer()!;
-    this.frameTex = gl.createTexture()!;
-    gl.bindTexture(gl.TEXTURE_2D, this.frameTex);
+    this.frameTex = this.makeTex();
+    this.personTex = this.makeTex();
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  }
+
+  private makeTex(): WebGLTexture {
+    const gl = this.gl;
+    const t = gl.createTexture()!;
+    gl.bindTexture(gl.TEXTURE_2D, t);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    return t;
   }
 
   private resize(pw: number, ph: number, ow: number, oh: number) {
     if (this.pw !== pw || this.ph !== ph) {
       this.pw = pw; this.ph = ph;
+      this.bw = Math.max(2, Math.round(pw / 2)); this.bh = Math.max(2, Math.round(ph / 2));
       this.blurH = makeFBO(this.gl, pw, ph);
       this.blurV = makeFBO(this.gl, pw, ph);
       this.mask = makeFBO(this.gl, pw, ph);
       this.histA = makeFBO(this.gl, pw, ph);
       this.histB = makeFBO(this.gl, pw, ph);
+      this.bokehA = makeFBO(this.gl, this.bw, this.bh);
+      this.bokehB = makeFBO(this.gl, this.bw, this.bh);
     }
     if (this.ow !== ow || this.oh !== oh) {
       this.ow = ow; this.oh = oh;
@@ -259,7 +291,13 @@ export class WebcamEngine {
     gl.drawArrays(gl.TRIANGLES, 0, verts.length / 2);
   }
 
-  render(video: HTMLVideoElement, s: EnhanceSettings, face: { points: { x: number; y: number }[] | null }, regions: FaceRegions | null) {
+  render(
+    video: HTMLVideoElement,
+    s: EnhanceSettings,
+    face: { points: { x: number; y: number }[] | null },
+    regions: FaceRegions | null,
+    person?: { data: Uint8Array; width: number; height: number } | null
+  ) {
     const gl = this.gl;
     const vw = video.videoWidth, vh = video.videoHeight;
     if (!vw || !vh) return;
@@ -308,7 +346,7 @@ export class WebcamEngine {
       gl.colorMask(true, true, true, true);
     }
 
-    const needBlur = (s.enhanceOn && s.clarity > 0) || beautify;
+    const needBlur = (s.enhanceOn && s.clarity > 0) || beautify || s.bgBlur > 0;
     if (needBlur) {
       gl.useProgram(this.progBlur);
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.blurH.fbo);
@@ -323,6 +361,28 @@ export class WebcamEngine {
       this.drawQuad(this.progBlur);
     }
 
+    // DSLR bokeh: strong 2-iteration blur at half res + upload the person mask
+    const bgOn = s.bgBlur > 0 && !!person;
+    if (bgOn && person) {
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+      gl.bindTexture(gl.TEXTURE_2D, this.personTex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, person.width, person.height, 0, gl.RED, gl.UNSIGNED_BYTE, person.data);
+      const bw = this.bw, bh = this.bh;
+      gl.useProgram(this.progBlur);
+      const blurStep = (src: WebGLTexture, dst: WebGLFramebuffer, dx: number, dy: number) => {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, dst);
+        gl.viewport(0, 0, bw, bh);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, src);
+        gl.uniform1i(gl.getUniformLocation(this.progBlur, "u_tex"), 0);
+        gl.uniform2f(gl.getUniformLocation(this.progBlur, "u_dir"), dx, dy);
+        this.drawQuad(this.progBlur);
+      };
+      blurStep(cleanTex, this.bokehA.fbo, 3.0 / bw, 0);
+      blurStep(this.bokehA.tex, this.bokehB.fbo, 0, 3.0 / bh);
+      blurStep(this.bokehB.tex, this.bokehA.fbo, 5.5 / bw, 0);
+      blurStep(this.bokehA.tex, this.bokehB.fbo, 0, 5.5 / bh);
+    }
+
     const p = this.progComposite;
     gl.useProgram(p);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -333,10 +393,18 @@ export class WebcamEngine {
     gl.uniform1i(gl.getUniformLocation(p, "u_blur"), 1);
     gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, this.mask.tex);
     gl.uniform1i(gl.getUniformLocation(p, "u_mask"), 2);
+    gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, bgOn ? this.bokehB.tex : cleanTex);
+    gl.uniform1i(gl.getUniformLocation(p, "u_bokeh"), 3);
+    gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, this.personTex);
+    gl.uniform1i(gl.getUniformLocation(p, "u_person"), 4);
     gl.uniform2f(gl.getUniformLocation(p, "u_texel"), 1 / pw, 1 / ph);
     gl.uniform1i(gl.getUniformLocation(p, "u_enhance"), s.enhanceOn ? 1 : 0);
     gl.uniform1i(gl.getUniformLocation(p, "u_beautify"), beautify ? 1 : 0);
     gl.uniform1i(gl.getUniformLocation(p, "u_mirror"), s.mirror ? 1 : 0);
+    gl.uniform1i(gl.getUniformLocation(p, "u_bypass"), s.bypass ? 1 : 0);
+    gl.uniform1f(gl.getUniformLocation(p, "u_contrast"), s.contrast);
+    gl.uniform1f(gl.getUniformLocation(p, "u_vibrance"), s.vibrance);
+    gl.uniform1f(gl.getUniformLocation(p, "u_bgblur"), bgOn ? s.bgBlur : 0);
     gl.uniform1f(gl.getUniformLocation(p, "u_exposure"), s.exposure);
     gl.uniform1f(gl.getUniformLocation(p, "u_shadow"), s.shadow);
     gl.uniform1f(gl.getUniformLocation(p, "u_denoise"), s.denoise);

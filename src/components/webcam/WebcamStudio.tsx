@@ -9,13 +9,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { WebcamEngine, type EnhanceSettings, type OutputRes } from "@/lib/webcamEngine";
 import { loadFaceTracker, detectFace, faceRegions, type FaceResult } from "@/lib/faceTrack";
+import { loadSegmenter, segmentFrame, type PersonMask } from "@/lib/segment";
 import { VideocamIcon } from "@/components/Icons";
 
 type CamState = "idle" | "starting" | "live" | "denied" | "error";
 
+// visibly punchy out of the box — this is what "enhanced" should read as
 const DEFAULTS: EnhanceSettings = {
-  enhanceOn: true, exposure: 1.06, shadow: 0.35, warmth: 0.1, autoWB: true,
-  denoise: 0.4, temporal: 0.45, sharpen: 0.5, clarity: 0.35, outputRes: "native",
+  enhanceOn: true, exposure: 1.08, shadow: 0.35, warmth: 0.12, autoWB: true,
+  denoise: 0.4, temporal: 0.45, sharpen: 0.85, clarity: 0.55,
+  contrast: 1.12, vibrance: 1.18, bgBlur: 0, bypass: false, outputRes: "native",
   beautifyOn: false, smooth: 0.5, even: 0.4, eye: 0.4,
   autoFrame: false, mirror: true,
   crop: { x: 0, y: 0, w: 1, h: 1 }, wb: [1, 1, 1],
@@ -26,6 +29,15 @@ const RES_OPTIONS: { id: OutputRes; label: string }[] = [
   { id: "fhd", label: "1080p" },
   { id: "qhd", label: "1440p" },
   { id: "uhd", label: "4K" },
+];
+
+// one-click looks — each cranks the right combo so the difference is obvious
+type Preset = Partial<EnhanceSettings>;
+const PRESETS: { name: string; s: Preset }[] = [
+  { name: "Natural", s: { exposure: 1.04, shadow: 0.3, denoise: 0.35, temporal: 0.4, sharpen: 0.5, clarity: 0.3, contrast: 1.05, vibrance: 1.08, bgBlur: 0, beautifyOn: false } },
+  { name: "DSLR", s: { exposure: 1.1, shadow: 0.35, denoise: 0.45, temporal: 0.5, sharpen: 1.05, clarity: 0.72, contrast: 1.2, vibrance: 1.28, bgBlur: 0.9, beautifyOn: true } },
+  { name: "Cinematic", s: { exposure: 1.02, shadow: 0.45, denoise: 0.5, temporal: 0.55, sharpen: 0.65, clarity: 0.6, contrast: 1.24, vibrance: 0.92, warmth: 0.28, autoWB: false, bgBlur: 0.65, beautifyOn: false } },
+  { name: "Bright", s: { exposure: 1.22, shadow: 0.55, denoise: 0.5, temporal: 0.5, sharpen: 0.75, clarity: 0.42, contrast: 1.08, vibrance: 1.22, bgBlur: 0, beautifyOn: true } },
 ];
 
 export default function WebcamStudio() {
@@ -43,6 +55,8 @@ export default function WebcamStudio() {
   const engineRef = useRef<WebcamEngine | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const trackerRef = useRef<any>(null);
+  const segmenterRef = useRef<any>(null);
+  const personRef = useRef<PersonMask | null>(null);
   const rafRef = useRef(0);
   const sRef = useRef(s); sRef.current = s;
   const camRef = useRef(cam); camRef.current = cam;
@@ -139,6 +153,14 @@ export default function WebcamStudio() {
     }
   }, [s.beautifyOn, s.autoFrame]);
 
+  // lazy-load the person segmenter the first time background blur turns on
+  useEffect(() => {
+    if (s.bgBlur > 0 && !segmenterRef.current) {
+      loadSegmenter(setTrackerMsg).then((seg) => { segmenterRef.current = seg; setTrackerMsg(""); })
+        .catch((e) => { console.error(e); setTrackerMsg("Background AI failed to load"); });
+    }
+  }, [s.bgBlur]);
+
   function grayWorld(video: HTMLVideoElement): [number, number, number] {
     if (!wbCanvas.current) { wbCanvas.current = document.createElement("canvas"); wbCanvas.current.width = 16; wbCanvas.current.height = 16; }
     const ctx = wbCanvas.current.getContext("2d", { willReadFrequently: true })!;
@@ -183,8 +205,15 @@ export default function WebcamStudio() {
 
     if (st.autoWB && st.enhanceOn && frameCount.current % 12 === 0) wbRef.current = grayWorld(v);
 
+    // person segmentation for background blur (every other frame is plenty —
+    // the mask is upscaled + soft-edged, so 15Hz updates look continuous)
+    if (st.bgBlur > 0 && segmenterRef.current && v.readyState >= 2 && frameCount.current % 2 === 0) {
+      try { personRef.current = segmentFrame(segmenterRef.current, v, performance.now()); } catch { /* skip */ }
+    }
+    if (st.bgBlur === 0) personRef.current = null;
+
     const cr = cropRef.current;
-    engine.render(v, { ...st, crop: { x: cr.x, y: cr.y, w: cr.f, h: cr.f }, wb: wbRef.current }, face, faceRegions());
+    engine.render(v, { ...st, crop: { x: cr.x, y: cr.y, w: cr.f, h: cr.f }, wb: wbRef.current }, face, faceRegions(), personRef.current);
 
     if (st.beautifyOn || st.autoFrame) setFaceOkThrottled(!!face.box);
 
@@ -233,6 +262,7 @@ export default function WebcamStudio() {
   }
 
   const set = (patch: Partial<EnhanceSettings>) => setS((p) => ({ ...p, ...patch }));
+  const applyPreset = (preset: Preset) => setS((p) => ({ ...p, enhanceOn: true, ...preset }));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -297,6 +327,26 @@ export default function WebcamStudio() {
 
       {cam === "live" && (
         <>
+          {/* one-click looks + hold-to-compare */}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <span className="mono" style={{ fontSize: 10.5, color: "var(--text-dim)", marginRight: 2 }}>LOOK</span>
+            {PRESETS.map((pr) => (
+              <button key={pr.name} onClick={() => applyPreset(pr.s)} style={{
+                background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 999,
+                padding: "7px 16px", fontSize: 13, cursor: "pointer", color: "var(--text)", fontWeight: 500,
+              }}>{pr.name}</button>
+            ))}
+            <span style={{ flex: 1 }} />
+            <button
+              onPointerDown={() => set({ bypass: true })}
+              onPointerUp={() => set({ bypass: false })}
+              onPointerLeave={() => set({ bypass: false })}
+              style={{ background: s.bypass ? "var(--accent)" : "var(--surface-2)", color: s.bypass ? "#fff" : "var(--text-muted)", border: "0.5px solid var(--border)", borderRadius: 999, padding: "7px 16px", fontSize: 13, cursor: "pointer", userSelect: "none", touchAction: "none" }}
+            >
+              {s.bypass ? "showing original" : "⌗ Hold to compare"}
+            </button>
+          </div>
+
           {/* action row */}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             <button onClick={toggleRecord} style={{ background: recording ? "var(--surface-2)" : "var(--accent)", color: recording ? "var(--text)" : "#fff", border: recording ? "0.5px solid var(--border)" : "none", borderRadius: 10, padding: "10px 20px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
@@ -332,8 +382,15 @@ export default function WebcamStudio() {
               <Slider label="Denoise (spatial)" min={0} max={1} step={0.02} value={s.denoise} onChange={(v) => set({ denoise: v })} />
               <Slider label="Sharpen" min={0} max={1.5} step={0.02} value={s.sharpen} onChange={(v) => set({ sharpen: v })} />
               <Slider label="Clarity" min={0} max={1} step={0.02} value={s.clarity} onChange={(v) => set({ clarity: v })} />
+              <Slider label="Contrast" min={0.8} max={1.5} step={0.02} value={s.contrast} onChange={(v) => set({ contrast: v })} />
+              <Slider label="Color pop" min={0.6} max={1.7} step={0.02} value={s.vibrance} onChange={(v) => set({ vibrance: v })} />
               <Toggle label="Auto white balance" on={s.autoWB} onToggle={() => set({ autoWB: !s.autoWB })} />
               {!s.autoWB && <Slider label="Warmth" min={-1} max={1} step={0.05} value={s.warmth} onChange={(v) => set({ warmth: v })} />}
+            </Module>
+
+            <Module title="Background blur" hint="DSLR bokeh — you stay sharp" on={s.bgBlur > 0} onToggle={() => set({ bgBlur: s.bgBlur > 0 ? 0 : 0.85 })}>
+              <Slider label="Blur strength" min={0.1} max={1} step={0.02} value={s.bgBlur || 0.85} onChange={(v) => set({ bgBlur: v })} />
+              <p className="mono" style={{ fontSize: 10.5, color: "var(--text-dim)", marginTop: 2 }}>needs a visible person · 249KB AI, loads once</p>
             </Module>
 
             <Module title="Beautify" hint="skin · lighting · eyes" on={s.beautifyOn} onToggle={() => set({ beautifyOn: !s.beautifyOn })}>
