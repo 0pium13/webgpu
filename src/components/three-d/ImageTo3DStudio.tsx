@@ -29,6 +29,14 @@ export default function ImageTo3DStudio({ input, onReset }: { input: Img3DFile; 
   const [cutoutUrl, setCutoutUrl] = useState<string | null>(null);
 
   async function start() {
+    // this tool needs WebGPU (the 840MB model is unusable on CPU) — most
+    // phones and Safari don't have it, so say so clearly instead of letting
+    // the ONNX runtime throw a cryptic "no available backend found"
+    if (typeof navigator !== "undefined" && !("gpu" in navigator)) {
+      setErrMsg("Image → 3D needs WebGPU, which this device doesn't have. Open it on a desktop in Chrome or Edge — phones and Safari can't run it yet.");
+      setPhase("error");
+      return;
+    }
     try {
       setPhase("working");
       const img = new Image();
@@ -45,7 +53,12 @@ export default function ImageTo3DStudio({ input, onReset }: { input: Img3DFile; 
       mountViewer(mesh);
     } catch (e: any) {
       console.error(e);
-      setErrMsg(e?.message ?? "Something went wrong");
+      const raw = String(e?.message ?? "");
+      setErrMsg(
+        /backend|webgpu|device lost|out of memory|oom/i.test(raw)
+          ? "Couldn't start the 3D engine on this device — it needs a desktop GPU with WebGPU (Chrome or Edge). On phones/Safari it won't run."
+          : raw || "Something went wrong"
+      );
       setPhase("error");
     }
   }
