@@ -48,7 +48,9 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+          // camera + mic self-allowed for the Webcam Studio (still processed
+          // entirely in-tab; nothing uploaded). geolocation/payment stay off.
+          { key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=(), payment=()" },
           { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
           { key: "X-DNS-Prefetch-Control", value: "on" },
         ],

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { UpscaleIcon, RotoscopeIcon, BgRemoveIcon, CubeIcon, CaptionsIcon, EraserIcon, ConvertIcon, ChatIcon, PdfIcon, VoiceIcon } from "./Icons";
+import { UpscaleIcon, RotoscopeIcon, BgRemoveIcon, CubeIcon, CaptionsIcon, EraserIcon, ConvertIcon, ChatIcon, PdfIcon, VoiceIcon, VideocamIcon } from "./Icons";
 
 const TOOLS = [
   { href: "/upscale", Icon: UpscaleIcon, name: "Upscaler", desc: "Real AI detail reconstruction. Up to 4K.", tint: "#818cf8" },
@@ -13,6 +13,7 @@ const TOOLS = [
   { href: "/convert", Icon: ConvertIcon, name: "Converter", desc: "MP4, MP3, GIF, compress. No upload sites, no ads.", tint: "#a3e635" },
   { href: "/pdf", Icon: PdfIcon, name: "PDF Studio", desc: "Merge, split, compress, convert. Your contract stays here.", tint: "#f87171" },
   { href: "/voice", Icon: VoiceIcon, name: "Voice Studio", desc: "Studio TTS in English, Hindi + more. No credits, ever.", tint: "#e879f9" },
+  { href: "/webcam", Icon: VideocamIcon, name: "Webcam Studio", desc: "Enhance + retouch + auto-frame your live cam. Real time.", tint: "#2dd4bf" },
   { href: "/chat", Icon: ChatIcon, name: "Local AI Chat", desc: "A real LLM on your GPU. Works offline, keeps secrets.", tint: "#38bdf8" },
 ];
 

@@ -12,6 +12,7 @@ const LINKS = [
   { href: "/convert", label: "Convert" },
   { href: "/pdf", label: "PDF" },
   { href: "/voice", label: "Voice" },
+  { href: "/webcam", label: "Cam" },
   { href: "/chat", label: "Chat" },
 ];
 

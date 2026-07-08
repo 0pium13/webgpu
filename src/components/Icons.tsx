@@ -216,6 +216,17 @@ export function VoiceIcon(props: IconProps) {
   );
 }
 
+/** Webcam studio — a camera lens with a live-enhance spark */
+export function VideocamIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="3" y="6.5" width="12.5" height="11" rx="2.5" />
+      <path d="m15.5 10 5-2.5v9l-5-2.5" />
+      <path d="M8.75 9.4c.28 1.6 1.15 2.47 2.75 2.75-1.6.28-2.47 1.15-2.75 2.75-.28-1.6-1.15-2.47-2.75-2.75 1.6-.28 2.47-1.15 2.75-2.75Z" />
+    </Svg>
+  );
+}
+
 /** Magic eraser — tilted eraser wiping, the removed bits dissolving away */
 export function EraserIcon(props: IconProps) {
   return (
