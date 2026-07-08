@@ -14,12 +14,12 @@ import { VideocamIcon } from "@/components/Icons";
 
 type CamState = "idle" | "starting" | "live" | "denied" | "error";
 
-// visibly punchy out of the box — this is what "enhanced" should read as
+// clean & natural out of the box — strong denoise, gentle everything else
 const DEFAULTS: EnhanceSettings = {
-  enhanceOn: true, exposure: 1.08, shadow: 0.35, warmth: 0.12, autoWB: true,
-  denoise: 0.4, temporal: 0.45, sharpen: 0.85, clarity: 0.55,
-  contrast: 1.12, vibrance: 1.18, bgBlur: 0, bypass: false, outputRes: "native",
-  beautifyOn: false, smooth: 0.5, even: 0.4, eye: 0.4,
+  enhanceOn: true, exposure: 1.04, shadow: 0.22, warmth: 0.05, autoWB: true,
+  denoise: 0.6, temporal: 0.6, sharpen: 0.28, clarity: 0.18,
+  contrast: 1.04, vibrance: 1.06, bgBlur: 0, bypass: false, outputRes: "native",
+  beautifyOn: true, smooth: 0.45, even: 0.3, eye: 0.25,
   autoFrame: false, mirror: true,
   crop: { x: 0, y: 0, w: 1, h: 1 }, wb: [1, 1, 1],
 };
@@ -31,13 +31,13 @@ const RES_OPTIONS: { id: OutputRes; label: string }[] = [
   { id: "uhd", label: "4K" },
 ];
 
-// one-click looks — each cranks the right combo so the difference is obvious
+// one-click looks — clean & natural first, nothing cranked to a filter look
 type Preset = Partial<EnhanceSettings>;
 const PRESETS: { name: string; s: Preset }[] = [
-  { name: "Natural", s: { exposure: 1.04, shadow: 0.3, denoise: 0.35, temporal: 0.4, sharpen: 0.5, clarity: 0.3, contrast: 1.05, vibrance: 1.08, bgBlur: 0, beautifyOn: false } },
-  { name: "DSLR", s: { exposure: 1.1, shadow: 0.35, denoise: 0.45, temporal: 0.5, sharpen: 1.05, clarity: 0.72, contrast: 1.2, vibrance: 1.28, bgBlur: 0.9, beautifyOn: true } },
-  { name: "Cinematic", s: { exposure: 1.02, shadow: 0.45, denoise: 0.5, temporal: 0.55, sharpen: 0.65, clarity: 0.6, contrast: 1.24, vibrance: 0.92, warmth: 0.28, autoWB: false, bgBlur: 0.65, beautifyOn: false } },
-  { name: "Bright", s: { exposure: 1.22, shadow: 0.55, denoise: 0.5, temporal: 0.5, sharpen: 0.75, clarity: 0.42, contrast: 1.08, vibrance: 1.22, bgBlur: 0, beautifyOn: true } },
+  { name: "Clean", s: { exposure: 1.04, shadow: 0.22, denoise: 0.62, temporal: 0.62, sharpen: 0.28, clarity: 0.18, contrast: 1.04, vibrance: 1.05, warmth: 0.05, autoWB: true, bgBlur: 0, beautifyOn: true, smooth: 0.5, even: 0.35 } },
+  { name: "DSLR", s: { exposure: 1.05, shadow: 0.25, denoise: 0.58, temporal: 0.6, sharpen: 0.4, clarity: 0.28, contrast: 1.07, vibrance: 1.08, warmth: 0.08, autoWB: true, bgBlur: 0.8, beautifyOn: true, smooth: 0.5, even: 0.4 } },
+  { name: "Warm", s: { exposure: 1.06, shadow: 0.3, denoise: 0.55, temporal: 0.6, sharpen: 0.3, clarity: 0.2, contrast: 1.06, vibrance: 1.04, warmth: 0.22, autoWB: false, bgBlur: 0, beautifyOn: true, smooth: 0.5 } },
+  { name: "Bright", s: { exposure: 1.16, shadow: 0.42, denoise: 0.6, temporal: 0.6, sharpen: 0.3, clarity: 0.2, contrast: 1.04, vibrance: 1.06, autoWB: true, bgBlur: 0, beautifyOn: true, smooth: 0.5 } },
 ];
 
 export default function WebcamStudio() {
@@ -380,7 +380,7 @@ export default function WebcamStudio() {
               <Slider label="Lift shadows" min={0} max={1} step={0.02} value={s.shadow} onChange={(v) => set({ shadow: v })} />
               <Slider label="Clean (temporal)" min={0} max={0.9} step={0.02} value={s.temporal} onChange={(v) => set({ temporal: v })} />
               <Slider label="Denoise (spatial)" min={0} max={1} step={0.02} value={s.denoise} onChange={(v) => set({ denoise: v })} />
-              <Slider label="Sharpen" min={0} max={1.5} step={0.02} value={s.sharpen} onChange={(v) => set({ sharpen: v })} />
+              <Slider label="Sharpen" min={0} max={1} step={0.02} value={s.sharpen} onChange={(v) => set({ sharpen: v })} />
               <Slider label="Clarity" min={0} max={1} step={0.02} value={s.clarity} onChange={(v) => set({ clarity: v })} />
               <Slider label="Contrast" min={0.8} max={1.5} step={0.02} value={s.contrast} onChange={(v) => set({ contrast: v })} />
               <Slider label="Color pop" min={0.6} max={1.7} step={0.02} value={s.vibrance} onChange={(v) => set({ vibrance: v })} />

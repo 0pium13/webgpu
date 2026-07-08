@@ -115,18 +115,22 @@ void main(){
   if (u_bypass) { o = vec4(center, 1.0); return; }   // hold-to-compare: raw
   vec3 c = center;
   if (u_enhance) {
+    // 5x5 average (bigger kernel = stronger, cleaner noise removal)
     vec3 avg = vec3(0.0);
-    for (int j=-1;j<=1;j++) for (int i=-1;i<=1;i++)
+    for (int j=-2;j<=2;j++) for (int i=-2;i<=2;i++)
       avg += texture(u_frame, uv + vec2(float(i),float(j)) * u_texel).rgb;
-    avg /= 9.0;
-    float flatW = 1.0 - clamp(length(center - avg) * 6.0, 0.0, 1.0);
-    c = mix(center, avg, u_denoise * flatW);
-    c *= u_exposure;
-    float l = luma(c);
-    float sh = 1.0 - smoothstep(0.0, 0.5, l);
-    c = mix(c, sqrt(clamp(c,0.0,1.0)), u_shadow * sh);
+    avg /= 25.0;
+    // edge-aware denoise FIRST — smooth flat noise, preserve real edges
+    float flatW = 1.0 - clamp(length(center - avg) * 5.0, 0.0, 1.0);
+    c = mix(center, avg, clamp(u_denoise * (0.4 + 0.6 * flatW), 0.0, 1.0));
+    // gentle sharpen of REAL detail on the denoised image (tone still linear,
+    // so this adds crispness without amplifying noise or shifting colour)
+    c += u_sharpen * (c - avg) * flatW;
     c *= u_wb;
-    c += u_sharpen * (c - avg);
+    // brighten shadows/mids via gamma — pow(x,1/g) leaves white at 1.0, so
+    // highlights can NEVER blow out the way an exposure multiply does
+    float gamma = 1.0 + u_shadow * 0.9 + (u_exposure - 1.0) * 2.2;
+    c = pow(clamp(c, 0.0, 1.0), vec3(1.0 / gamma));
     float lb = luma(texture(u_blur, uv).rgb);
     c *= 1.0 + u_clarity * (luma(c) - lb);
   }
@@ -144,10 +148,13 @@ void main(){
     vec3 bright = clamp((c - 0.5) * 1.12 + 0.5 + 0.06, 0.0, 1.0);
     c = mix(c, bright, u_eye * eye);
   }
-  // colour grade — the "punch": S-curve contrast + vibrance
+  // colour grade — gentle contrast + skin-safe vibrance (boost dull colours,
+  // spare already-saturated skin tones so faces don't go orange)
   c = clamp((c - 0.5) * u_contrast + 0.5, 0.0, 1.0);
   float lc = luma(c);
-  c = clamp(mix(vec3(lc), c, u_vibrance), 0.0, 1.0);
+  float sat = length(c - vec3(lc));
+  float vib = mix(u_vibrance, 1.0, smoothstep(0.16, 0.42, sat));
+  c = clamp(mix(vec3(lc), c, vib), 0.0, 1.0);
   // DSLR bokeh — keep the person sharp, blur + gently deepen the background
   if (u_bgblur > 0.0) {
     float person = texture(u_person, uv).r;
