@@ -7,7 +7,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { WebcamEngine, type EnhanceSettings } from "@/lib/webcamEngine";
+import { WebcamEngine, type EnhanceSettings, type OutputRes } from "@/lib/webcamEngine";
 import { loadFaceTracker, detectFace, faceRegions, type FaceResult } from "@/lib/faceTrack";
 import { VideocamIcon } from "@/components/Icons";
 
@@ -15,11 +15,18 @@ type CamState = "idle" | "starting" | "live" | "denied" | "error";
 
 const DEFAULTS: EnhanceSettings = {
   enhanceOn: true, exposure: 1.06, shadow: 0.35, warmth: 0.1, autoWB: true,
-  denoise: 0.5, sharpen: 0.5, clarity: 0.35,
+  denoise: 0.4, temporal: 0.45, sharpen: 0.5, clarity: 0.35, outputRes: "native",
   beautifyOn: false, smooth: 0.5, even: 0.4, eye: 0.4,
   autoFrame: false, mirror: true,
   crop: { x: 0, y: 0, w: 1, h: 1 }, wb: [1, 1, 1],
 };
+
+const RES_OPTIONS: { id: OutputRes; label: string }[] = [
+  { id: "native", label: "Native" },
+  { id: "fhd", label: "1080p" },
+  { id: "qhd", label: "1440p" },
+  { id: "uhd", label: "4K" },
+];
 
 export default function WebcamStudio() {
   const [cam, setCam] = useState<CamState>("idle");
@@ -46,6 +53,8 @@ export default function WebcamStudio() {
   const wbRef = useRef<[number, number, number]>([1, 1, 1]);
   const frameCount = useRef(0);
   const lastFpsT = useRef(performance.now());
+  const fpsBase = useRef(0);
+  const faceOkT = useRef(0);
 
   // ── camera lifecycle ────────────────────────────────────────────────────
   const start = useCallback(async () => {
@@ -70,10 +79,9 @@ export default function WebcamStudio() {
       const v = videoRef.current!;
       v.srcObject = stream;
       await v.play();
-      // dispose any prior engine so we never stack WebGL contexts (browsers
-      // cap them and silently lose the oldest → "shader compile: null")
-      engineRef.current?.dispose();
-      engineRef.current = new WebcamEngine(canvasRef.current!);
+      // create the GL engine ONCE and reuse it — recreating (and disposing) a
+      // context on the same canvas poisons it, so createShader returns null
+      if (!engineRef.current) engineRef.current = new WebcamEngine(canvasRef.current!);
       setCam("live");
       loop();
     } catch (e: any) {
@@ -91,16 +99,24 @@ export default function WebcamStudio() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // stop = pause: end the stream + rAF but KEEP the GL engine/context alive so
+  // the next Start reuses it (disposing it would poison the canvas)
   const stop = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
+    recRef.current?.state === "recording" && recRef.current.stop();
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setCam("idle"); setFaceOk(null); setFps(0);
+  }, []);
+
+  // full teardown only when the component unmounts (navigating away)
+  useEffect(() => () => {
     cancelAnimationFrame(rafRef.current);
     recRef.current?.state === "recording" && recRef.current.stop();
     streamRef.current?.getTracks().forEach((t) => t.stop());
     engineRef.current?.dispose();
     engineRef.current = null;
-    setCam("idle"); setFaceOk(null); setFps(0);
   }, []);
-
-  useEffect(() => () => stop(), [stop]);
 
   // proactively detect a sticky "blocked" permission so we can guide the user
   // to unblock it, instead of only failing after they click Start
@@ -180,8 +196,6 @@ export default function WebcamStudio() {
     }
     rafRef.current = requestAnimationFrame(loop);
   }
-  const fpsBase = useRef(0);
-  const faceOkT = useRef(0);
   function setFaceOkThrottled(ok: boolean) {
     const n = performance.now();
     if (n - faceOkT.current > 400) { faceOkT.current = n; setFaceOk(ok); }
@@ -290,6 +304,21 @@ export default function WebcamStudio() {
             </button>
             <button onClick={snapshot} style={ghost}>Snapshot PNG</button>
             <button onClick={stop} style={ghost}>Stop camera</button>
+            {/* output quality */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 4 }}>
+              <span className="mono" style={{ fontSize: 10.5, color: "var(--text-dim)", marginRight: 2 }}>OUTPUT</span>
+              {RES_OPTIONS.map((r) => {
+                const active = s.outputRes === r.id;
+                return (
+                  <button key={r.id} onClick={() => set({ outputRes: r.id })} style={{
+                    background: active ? "var(--accent-dim)" : "var(--surface)",
+                    border: active ? "0.5px solid var(--accent)" : "0.5px solid var(--border)",
+                    borderRadius: 8, padding: "6px 11px", fontSize: 12, cursor: "pointer",
+                    color: active ? "var(--accent)" : "var(--text-muted)", fontWeight: active ? 500 : 400,
+                  }}>{r.label}</button>
+                );
+              })}
+            </div>
             <span style={{ flex: 1 }} />
             {recUrl && <a href={recUrl} download="webcam-recording.webm" style={{ background: "var(--surface-2)", color: "var(--text)", border: "0.5px solid var(--accent)", borderRadius: 10, padding: "10px 18px", fontSize: 14, fontWeight: 500, textDecoration: "none" }}>↓ Download recording</a>}
           </div>
@@ -299,7 +328,8 @@ export default function WebcamStudio() {
             <Module title="Enhance" hint="low-light · denoise · sharpen" on={s.enhanceOn} onToggle={() => set({ enhanceOn: !s.enhanceOn })}>
               <Slider label="Brightness" min={0.7} max={1.6} step={0.02} value={s.exposure} onChange={(v) => set({ exposure: v })} />
               <Slider label="Lift shadows" min={0} max={1} step={0.02} value={s.shadow} onChange={(v) => set({ shadow: v })} />
-              <Slider label="Denoise" min={0} max={1} step={0.02} value={s.denoise} onChange={(v) => set({ denoise: v })} />
+              <Slider label="Clean (temporal)" min={0} max={0.9} step={0.02} value={s.temporal} onChange={(v) => set({ temporal: v })} />
+              <Slider label="Denoise (spatial)" min={0} max={1} step={0.02} value={s.denoise} onChange={(v) => set({ denoise: v })} />
               <Slider label="Sharpen" min={0} max={1.5} step={0.02} value={s.sharpen} onChange={(v) => set({ sharpen: v })} />
               <Slider label="Clarity" min={0} max={1} step={0.02} value={s.clarity} onChange={(v) => set({ clarity: v })} />
               <Toggle label="Auto white balance" on={s.autoWB} onToggle={() => set({ autoWB: !s.autoWB })} />

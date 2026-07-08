@@ -16,10 +16,10 @@ export default function WebcamPage() {
             Webcam Studio
           </h1>
           <p style={{ fontSize: 16, color: "var(--text-muted)", maxWidth: 620, lineHeight: 1.6 }}>
-            Make any webcam look pro, live — low-light lift, denoise, sharpen,
-            skin retouch, and auto-framing, all on your GPU in real time. Record
-            it or feed it to OBS. Camo and mmhmm charge for this; here it&apos;s free
-            and nothing leaves your machine.
+            Make any webcam look pro, live — low-light lift, temporal denoise,
+            sharpen, skin retouch, auto-framing, and clean output up to 4K, all
+            on your GPU in real time. Record it or feed it to OBS. Camo and mmhmm
+            charge for this; here it&apos;s free and nothing leaves your machine.
           </p>
         </div>
         <WebcamStudio />
