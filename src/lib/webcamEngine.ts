@@ -208,6 +208,7 @@ export class WebcamEngine {
   private blurH!: { tex: WebGLTexture; fbo: WebGLFramebuffer };
   private blurV!: { tex: WebGLTexture; fbo: WebGLFramebuffer };
   private mask!: { tex: WebGLTexture; fbo: WebGLFramebuffer };
+  private maskTmp!: { tex: WebGLTexture; fbo: WebGLFramebuffer };
   private histA!: { tex: WebGLTexture; fbo: WebGLFramebuffer };
   private histB!: { tex: WebGLTexture; fbo: WebGLFramebuffer };
   private bokehA!: { tex: WebGLTexture; fbo: WebGLFramebuffer };
@@ -253,6 +254,7 @@ export class WebcamEngine {
       this.blurH = makeFBO(this.gl, pw, ph);
       this.blurV = makeFBO(this.gl, pw, ph);
       this.mask = makeFBO(this.gl, pw, ph);
+      this.maskTmp = makeFBO(this.gl, pw, ph);
       this.histA = makeFBO(this.gl, pw, ph);
       this.histB = makeFBO(this.gl, pw, ph);
       this.bokehA = makeFBO(this.gl, this.bw, this.bh);
@@ -351,6 +353,20 @@ export class WebcamEngine {
       gl.colorMask(false, false, true, true);
       this.fillRegion(this.progMask, face.points, regions.lips, [0, 0, 1, 1]);
       gl.colorMask(true, true, true, true);
+      // feather the mask edges so beautify fades in gradually — a hard polygon
+      // edge shows up as a visible patch/seam on the face
+      const fr = Math.max(6, Math.round(pw / 90));
+      gl.useProgram(this.progBlur);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.maskTmp.fbo);
+      gl.viewport(0, 0, pw, ph);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.mask.tex);
+      gl.uniform1i(gl.getUniformLocation(this.progBlur, "u_tex"), 0);
+      gl.uniform2f(gl.getUniformLocation(this.progBlur, "u_dir"), fr / pw, 0);
+      this.drawQuad(this.progBlur);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.mask.fbo);
+      gl.bindTexture(gl.TEXTURE_2D, this.maskTmp.tex);
+      gl.uniform2f(gl.getUniformLocation(this.progBlur, "u_dir"), 0, fr / ph);
+      this.drawQuad(this.progBlur);
     }
 
     const needBlur = (s.enhanceOn && s.clarity > 0) || beautify || s.bgBlur > 0;
@@ -360,11 +376,11 @@ export class WebcamEngine {
       gl.viewport(0, 0, pw, ph);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, cleanTex);
       gl.uniform1i(gl.getUniformLocation(this.progBlur, "u_tex"), 0);
-      gl.uniform2f(gl.getUniformLocation(this.progBlur, "u_dir"), 2.5 / pw, 0);
+      gl.uniform2f(gl.getUniformLocation(this.progBlur, "u_dir"), 4.5 / pw, 0);
       this.drawQuad(this.progBlur);
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.blurV.fbo);
       gl.bindTexture(gl.TEXTURE_2D, this.blurH.tex);
-      gl.uniform2f(gl.getUniformLocation(this.progBlur, "u_dir"), 0, 2.5 / ph);
+      gl.uniform2f(gl.getUniformLocation(this.progBlur, "u_dir"), 0, 4.5 / ph);
       this.drawQuad(this.progBlur);
     }
 
