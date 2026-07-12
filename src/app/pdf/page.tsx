@@ -9,6 +9,7 @@
 import { useRef, useState } from "react";
 import Nav from "@/components/Nav";
 import Dropzone from "@/components/Dropzone";
+import PdfTextEditor from "@/components/pdf/PdfTextEditor";
 import { PdfIcon } from "@/components/Icons";
 import {
   renderThumbs, mergePdfs, rebuildPdf, imagesToPdf, pdfToImages, compressPdf,
@@ -31,6 +32,7 @@ export default function PdfPage() {
   const [rotations, setRotations] = useState<Record<number, number>>({});
   const [working, setWorking] = useState<Working>(null);
   const [errMsg, setErrMsg] = useState("");
+  const [editText, setEditText] = useState(false);
   const bufRef = useRef<ArrayBuffer | null>(null);
 
   async function handleFiles(files: File[]) {
@@ -67,6 +69,7 @@ export default function PdfPage() {
   function reset() {
     setPdfs([]); setImages([]); setThumbs([]); setSelected(new Set());
     setDeleted(new Set()); setRotations({}); setWorking(null); setErrMsg("");
+    setEditText(false);
     bufRef.current = null;
   }
 
@@ -180,8 +183,17 @@ export default function PdfPage() {
           </div>
         )}
 
+        {/* single-PDF text editing */}
+        {pdfs.length === 1 && editText && bufRef.current && (
+          <PdfTextEditor
+            data={bufRef.current}
+            fileName={file0.name}
+            onBack={() => setEditText(false)}
+          />
+        )}
+
         {/* single-PDF page surgery */}
-        {pdfs.length === 1 && (
+        {pdfs.length === 1 && !editText && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
               <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
@@ -223,6 +235,13 @@ export default function PdfPage() {
                 style={{ ...secondary, opacity: selected.size ? 1 : 0.45 }}
               >
                 ⟳ Rotate selected
+              </button>
+              <button
+                disabled={!!working || thumbs.length === 0}
+                onClick={() => setEditText(true)}
+                style={{ ...secondary, opacity: thumbs.length ? 1 : 0.45 }}
+              >
+                ✎ Edit text
               </button>
               <span style={{ flex: 1 }} />
               <button

@@ -12,6 +12,7 @@ const LINKS = [
   { name: "Voice", href: "/voice" },
   { name: "Webcam", href: "/webcam" },
   { name: "AI Chat", href: "/chat" },
+  { name: "Vibe Coder", href: "/code" },
   { name: "GitHub", href: "https://github.com/0pium13/webgpu" },
 ];
 

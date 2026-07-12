@@ -207,6 +207,17 @@ export function PdfIcon(props: IconProps) {
   );
 }
 
+/** Vibe coder — angle brackets with a spark of generation between them */
+export function CodeIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="m8 7.5-4.5 4.5L8 16.5" />
+      <path d="m16 7.5 4.5 4.5L16 16.5" />
+      <path d="M12 8.6c.24 1.4 1 2.16 2.4 2.4-1.4.24-2.16 1-2.4 2.4-.24-1.4-1-2.16-2.4-2.4 1.4-.24 2.16-1 2.4-2.4Z" />
+    </Svg>
+  );
+}
+
 /** Voice studio — a waveform finding its shape */
 export function VoiceIcon(props: IconProps) {
   return (

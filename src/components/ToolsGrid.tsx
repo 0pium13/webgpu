@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { UpscaleIcon, RotoscopeIcon, BgRemoveIcon, CubeIcon, CaptionsIcon, EraserIcon, ConvertIcon, ChatIcon, PdfIcon, VoiceIcon, VideocamIcon } from "./Icons";
+import { UpscaleIcon, RotoscopeIcon, BgRemoveIcon, CubeIcon, CaptionsIcon, EraserIcon, ConvertIcon, ChatIcon, PdfIcon, VoiceIcon, VideocamIcon, CodeIcon } from "./Icons";
 
 const TOOLS = [
   { href: "/upscale", Icon: UpscaleIcon, name: "Upscaler", desc: "Real AI detail reconstruction. Up to 4K.", tint: "#818cf8" },
@@ -15,6 +15,7 @@ const TOOLS = [
   { href: "/voice", Icon: VoiceIcon, name: "Voice Studio", desc: "Studio TTS in English, Hindi + more. No credits, ever.", tint: "#e879f9" },
   { href: "/webcam", Icon: VideocamIcon, name: "Webcam Studio", desc: "Enhance + retouch + auto-frame your live cam. Real time.", tint: "#2dd4bf" },
   { href: "/chat", Icon: ChatIcon, name: "Local AI Chat", desc: "A real LLM on your GPU. Works offline, keeps secrets.", tint: "#38bdf8" },
+  { href: "/code", Icon: CodeIcon, name: "Vibe Coder", desc: "Describe an app, watch it build and run. Local or your key.", tint: "#facc15" },
 ];
 
 export default function ToolsGrid() {

@@ -14,6 +14,7 @@ const LINKS = [
   { href: "/voice", label: "Voice" },
   { href: "/webcam", label: "Cam" },
   { href: "/chat", label: "Chat" },
+  { href: "/code", label: "Code" },
 ];
 
 export default function Nav() {

@@ -27,7 +27,7 @@ export function loadPdfjs(): Promise<any> {
  * fetches 404 — as they do with a bare self-hosted worker — page.render()
  * hangs FOREVER with no error. Every getDocument must point at our copies.
  */
-function openDoc(pdfjs: any, data: ArrayBuffer) {
+export function openDoc(pdfjs: any, data: ArrayBuffer) {
   return pdfjs.getDocument({
     data: data.slice(0), // pdf.js transfers the buffer to its worker — hand it a copy
     wasmUrl: "/pdfjs/wasm/",

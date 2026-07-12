@@ -15,11 +15,15 @@ const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net https://unpkg.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' blob: data:",
+  // https: in img-src: Vibe Coder preview iframes (srcdoc inherits this CSP)
+  // may reference external images; images can't execute, so this stays safe.
+  "img-src 'self' blob: data: https:",
   "media-src 'self' blob:",
   "font-src 'self' data:",
   "worker-src 'self' blob:",
-  "connect-src 'self' blob: data: https://huggingface.co https://*.huggingface.co https://*.hf.co https://cdn.jsdelivr.net https://unpkg.com https://raw.githubusercontent.com",
+  // openrouter.ai: Vibe Coder BYOK calls — the user's own key, straight from
+  // their browser to OpenRouter; we never see or proxy it.
+  "connect-src 'self' blob: data: https://huggingface.co https://*.huggingface.co https://*.hf.co https://cdn.jsdelivr.net https://unpkg.com https://raw.githubusercontent.com https://openrouter.ai",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
