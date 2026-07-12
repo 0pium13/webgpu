@@ -4,6 +4,8 @@
 
 :root {
   --accent: #6366f1;
+  --accent-2: #8b5cf6;
+  --accent-3: #d946ef;
   --accent-dim: rgba(99, 102, 241, 0.1);
   --accent-border: rgba(99, 102, 241, 0.25);
   --canvas: #0a0a0b;
@@ -86,24 +88,91 @@ body::before {
   position: absolute;
   inset: -20%;
   background:
-    radial-gradient(42% 34% at 18% 12%, rgba(99, 102, 241, 0.11), transparent 70%),
-    radial-gradient(36% 30% at 85% 26%, rgba(139, 92, 246, 0.08), transparent 70%),
-    radial-gradient(44% 38% at 68% 88%, rgba(34, 211, 238, 0.05), transparent 70%),
-    radial-gradient(30% 26% at 8% 78%, rgba(236, 72, 153, 0.04), transparent 70%);
-  animation: field-drift 90s ease-in-out infinite alternate;
+    radial-gradient(42% 34% at 18% 12%, rgba(99, 102, 241, 0.22), transparent 70%),
+    radial-gradient(36% 30% at 85% 26%, rgba(139, 92, 246, 0.17), transparent 70%),
+    radial-gradient(44% 38% at 68% 88%, rgba(34, 211, 238, 0.10), transparent 70%),
+    radial-gradient(30% 26% at 8% 78%, rgba(236, 72, 153, 0.10), transparent 70%);
+  animation: field-drift 42s ease-in-out infinite alternate;
 }
 .bg-field::after {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
   background-size: 44px 44px;
   mask-image: radial-gradient(75% 60% at 50% 38%, black, transparent);
 }
 @keyframes field-drift {
   0%   { transform: translate3d(0, 0, 0) scale(1); }
-  50%  { transform: translate3d(2.5%, -2%, 0) scale(1.05); }
-  100% { transform: translate3d(-2%, 2.5%, 0) scale(1.02); }
+  50%  { transform: translate3d(3%, -2.5%, 0) scale(1.07); }
+  100% { transform: translate3d(-2.5%, 3%, 0) scale(1.03); }
+}
+
+/* ── premium motion layer ────────────────────────────────────────────────
+   Every page glides in; headline moments breathe with a living gradient;
+   nav links underline themselves; tool cards bloom in their own colour.
+   Transform + opacity only — silky on any GPU, and the global
+   prefers-reduced-motion kill switch turns all of it off. */
+
+/* page entrance — body's direct child is the page root on every route */
+@media (prefers-reduced-motion: no-preference) {
+  body > div:not(.bg-field) {
+    animation: page-in 0.55s var(--ease-lux) both;
+  }
+}
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* living gradient text — hero + headline moments */
+.grad-live {
+  background: linear-gradient(110deg, #e0e7ff, var(--accent), var(--accent-2), var(--accent-3), var(--accent-2), #e0e7ff);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: grad-sweep 7s ease-in-out infinite;
+}
+@keyframes grad-sweep {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* nav links — gradient underline grows from the left */
+.nav-link { position: relative; }
+.nav-link::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 3px;
+  height: 1.5px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.28s var(--ease-lux);
+}
+.nav-link:hover::after, .nav-link[data-active="true"]::after { transform: scaleX(1); }
+
+/* tool cards — per-tint glow bloom + springy icon lift on hover */
+.tool-card { position: relative; overflow: hidden; }
+.tool-card::after {
+  content: '';
+  position: absolute;
+  inset: -30%;
+  background: radial-gradient(50% 50% at 50% 0%, color-mix(in srgb, var(--tint, var(--accent)) 16%, transparent), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.35s var(--ease-lux);
+  pointer-events: none;
+}
+.tool-card:hover::after { opacity: 1; }
+.tool-card:hover .tool-icon { animation: icon-lift 0.45s var(--ease-spring) both; }
+@keyframes icon-lift {
+  0% { transform: translateY(0) scale(1); }
+  55% { transform: translateY(-4px) scale(1.14); }
+  100% { transform: translateY(-2px) scale(1.1); }
 }
 
 /* eraser detection boxes — quiet until you look at them */

@@ -21,6 +21,20 @@ export function loadPdfjs(): Promise<any> {
   return pdfjsPromise;
 }
 
+/**
+ * pdf.js v6 fetches side assets at render time: qcms/openjpeg/jbig2 WASM
+ * (color management + image codecs) and the 14 standard fonts. If those
+ * fetches 404 — as they do with a bare self-hosted worker — page.render()
+ * hangs FOREVER with no error. Every getDocument must point at our copies.
+ */
+function openDoc(pdfjs: any, data: ArrayBuffer) {
+  return pdfjs.getDocument({
+    data: data.slice(0), // pdf.js transfers the buffer to its worker — hand it a copy
+    wasmUrl: "/pdfjs/wasm/",
+    standardFontDataUrl: "/pdfjs/standard_fonts/",
+  });
+}
+
 export interface PageThumb {
   index: number; // 0-based
   canvas: HTMLCanvasElement;
@@ -35,8 +49,7 @@ export async function renderThumbs(
   thumbWidth = 180
 ): Promise<void> {
   const pdfjs = await loadPdfjs();
-  // pdf.js transfers the buffer to its worker — hand it a copy
-  const task = pdfjs.getDocument({ data: data.slice(0) });
+  const task = openDoc(pdfjs, data);
   const doc = await task.promise;
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i);
@@ -120,7 +133,7 @@ export async function pdfToImages(
 ): Promise<Blob> {
   const pdfjs = await loadPdfjs();
   const { default: JSZip } = await import("jszip");
-  const task = pdfjs.getDocument({ data: data.slice(0) });
+  const task = openDoc(pdfjs, data);
   const doc = await task.promise;
   const zip = new JSZip();
   for (let i = 1; i <= doc.numPages; i++) {
@@ -151,7 +164,7 @@ export async function compressPdf(
 ): Promise<Uint8Array> {
   const pdfjs = await loadPdfjs();
   const { PDFDocument } = await import("pdf-lib");
-  const task = pdfjs.getDocument({ data: data.slice(0) });
+  const task = openDoc(pdfjs, data);
   const doc = await task.promise;
   const out = await PDFDocument.create();
   for (let i = 1; i <= doc.numPages; i++) {
