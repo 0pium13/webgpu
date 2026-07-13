@@ -23,7 +23,7 @@ const CSP = [
   "worker-src 'self' blob:",
   // openrouter.ai: Vibe Coder BYOK calls — the user's own key, straight from
   // their browser to OpenRouter; we never see or proxy it.
-  "connect-src 'self' blob: data: https://huggingface.co https://*.huggingface.co https://*.hf.co https://cdn.jsdelivr.net https://unpkg.com https://raw.githubusercontent.com https://openrouter.ai",
+  "connect-src 'self' blob: data: https://huggingface.co https://*.huggingface.co https://*.hf.co https://cdn.jsdelivr.net https://unpkg.com https://raw.githubusercontent.com https://openrouter.ai https://api.elevenlabs.io",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
