@@ -5,16 +5,19 @@ import Nav from "@/components/Nav";
 import UpscaleDropzone from "@/components/upscale/UpscaleDropzone";
 import WebSRVideoProcessor from "@/components/upscale/WebSRVideoProcessor";
 import ImageProcessor from "@/components/upscale/ImageProcessor";
+import FaceRestoreProcessor from "@/components/upscale/FaceRestoreProcessor";
 import { useGPU, TIER_COLOR, formatDuration } from "@/lib/useGPU";
 import { LockIcon, BoltIcon, InfinityIcon, MediaIcon } from "@/components/Icons";
 
 export type UpscaleScale = "2x" | "4x";
+export type UpscaleMode = "2x" | "4x" | "faces";
 export type UpscaleFile = { file: File; url: string; isImage: boolean };
 
 export default function UpscalePage() {
   const [input, setInput] = useState<UpscaleFile | null>(null);
-  const [scale, setScale] = useState<UpscaleScale>("4x");
+  const [mode, setMode] = useState<UpscaleMode>("4x");
   const gpu = useGPU();
+  const scale: UpscaleScale = mode === "faces" ? "4x" : mode;
 
   function handleFile(file: File) {
     const url = URL.createObjectURL(file);
@@ -48,10 +51,12 @@ export default function UpscalePage() {
 
         {!input ? (
           <>
-            <ScalePicker scale={scale} setScale={setScale} />
+            <ScalePicker mode={mode} setMode={setMode} />
             <UpscaleDropzone onFile={handleFile} />
             <Features />
           </>
+        ) : input.isImage && mode === "faces" ? (
+          <FaceRestoreProcessor input={input} onReset={reset} />
         ) : input.isImage ? (
           <ImageProcessor input={input} scale={scale} onReset={reset} />
         ) : (
@@ -94,25 +99,35 @@ function GpuBanner({ gpu, scale }: { gpu: ReturnType<typeof useGPU>; scale: Upsc
   );
 }
 
-function ScalePicker({ scale, setScale }: { scale: UpscaleScale; setScale: (s: UpscaleScale) => void }) {
+function ScalePicker({ mode, setMode }: { mode: UpscaleMode; setMode: (m: UpscaleMode) => void }) {
+  const options: { id: UpscaleMode; label: string }[] = [
+    { id: "2x", label: "2x upscale" },
+    { id: "4x", label: "4x upscale" },
+    { id: "faces", label: "✨ Restore blurry faces" },
+  ];
   return (
-    <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-      {(["2x", "4x"] as UpscaleScale[]).map((s) => (
+    <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+      {options.map((o) => (
         <button
-          key={s}
-          onClick={() => setScale(s)}
+          key={o.id}
+          onClick={() => setMode(o.id)}
           style={{
             padding: "7px 20px",
             borderRadius: 8,
-            border: scale === s ? "0.5px solid var(--accent)" : "0.5px solid var(--border)",
-            background: scale === s ? "var(--accent-dim)" : "transparent",
-            color: scale === s ? "var(--accent)" : "var(--text-muted)",
+            border: mode === o.id ? "0.5px solid var(--accent)" : "0.5px solid var(--border)",
+            background: mode === o.id ? "var(--accent-dim)" : "transparent",
+            color: mode === o.id ? "var(--accent)" : "var(--text-muted)",
             fontSize: 14, fontWeight: 500, cursor: "pointer", transition: "all 0.15s",
           }}
         >
-          {s} upscale
+          {o.label}
         </button>
       ))}
+      {mode === "faces" && (
+        <p style={{ width: "100%", fontSize: 12, color: "var(--text-muted)", margin: 0 }}>
+          Fixes out-of-focus, low-res or old-photo faces — sharp eyes, skin and hair rebuilt by a face-specific AI. Photos only.
+        </p>
+      )}
     </div>
   );
 }

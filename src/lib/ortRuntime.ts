@@ -59,6 +59,7 @@ export async function createSession(
   const buf = new Uint8Array(loaded);
   let off = 0;
   for (const c of chunks) { buf.set(c, off); off += c.byteLength; }
+  chunks.length = 0; // release the duplicate ~model-size of chunk memory before session compile
 
   try {
     return await ort.InferenceSession.create(buf, {

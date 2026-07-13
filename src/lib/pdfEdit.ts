@@ -36,6 +36,23 @@ export interface EditorPage {
   numPages: number;
 }
 
+/**
+ * pdf.js v6's page.getTextContent() does `for await` directly on a
+ * ReadableStream — Safari only supports async stream iteration from 18.4,
+ * so it throws "undefined is not a function" there. Read the stream with a
+ * plain reader instead; identical result, works in every browser.
+ */
+async function readTextItems(page: any): Promise<any[]> {
+  const reader = page.streamTextContent().getReader();
+  const items: any[] = [];
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    if (value?.items) for (const it of value.items) items.push(it);
+  }
+  return items;
+}
+
 /** Render one page at editing size and extract clickable text runs. */
 export async function renderEditorPage(
   data: ArrayBuffer,
@@ -56,9 +73,9 @@ export async function renderEditorPage(
   canvas.height = Math.ceil(vp.height);
   await page.render({ canvas, canvasContext: canvas.getContext("2d")!, viewport: vp }).promise;
 
-  const tc = await page.getTextContent();
+  const items = await readTextItems(page);
   const runs: TextRun[] = [];
-  for (const item of tc.items as any[]) {
+  for (const item of items) {
     const str = String(item.str ?? "");
     if (!str.trim()) continue;
     const [a, b, , d, e, f] = item.transform; // text matrix, PDF space
