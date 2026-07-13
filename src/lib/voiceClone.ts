@@ -261,30 +261,57 @@ export async function cloneSpeak(
   const promptLen = inputs.input_ids.dims[1] as number;
   // ~22 codes/word is typical at 75Hz; 60/word + slack is a generous ceiling
   const maxNew = Math.min(3500, 120 + nTargetWords * 60);
+  // Light floor so a stray early <|audio_end|> can't hand back a 1-second clip.
+  // Kept well below a natural read (~6 raw tokens/word) so at this temperature —
+  // where the model reliably stops on its own — it almost never binds and can't
+  // force trailing babble.
+  const minNew = Math.min(maxNew - 40, Math.max(48, nTargetWords * 6));
 
-  // NO repetition penalty: audio codes repeat by nature (held sounds), and a
-  // global penalty over the code-heavy prompt bans real speech codes — the
-  // Python original patches the penalty to a 64-token window for this reason.
-  const outIds = await g.lm.generate({
-    ...inputs,
-    max_new_tokens: maxNew,
-    do_sample: true,
-    temperature: 0.1,
-    repetition_penalty: 1.0,
-    eos_token_id: [g.imEndId, g.audioEndId],
-  });
+  // temperature 0.1: this 500M model is fragile. Tested 0.3–0.4 for livelier
+  // prosody and both DEGRADED it — 0.4 truncated to a quiet 1.5s, 0.3 slurred
+  // words (ASR "hello to the past of the call voice" for a clean target). At
+  // 0.1 it's monotone but intelligible, which is the right trade. Real
+  // ElevenLabs-grade naturalness needs a far larger model than a browser can
+  // run — that's the Cloud Pro tier, not a sampling knob. rep-penalty stays 1.0
+  // (audio codes repeat by nature; a global penalty bans real speech codes).
+  const gen = async (temperature: number): Promise<bigint[]> => {
+    const outIds = await g.lm.generate({
+      ...inputs,
+      max_new_tokens: maxNew,
+      min_new_tokens: minNew,
+      do_sample: true,
+      temperature,
+      repetition_penalty: 1.0,
+      eos_token_id: [g.imEndId, g.audioEndId],
+    });
+    const seq: number[] = outIds.tolist()[0].slice(promptLen).map(Number);
+    const codes: bigint[] = [];
+    for (const t of seq) {
+      const c = g.idToCode.get(t);
+      if (c !== undefined) codes.push(BigInt(c));
+    }
+    return codes;
+  };
 
-  const seq: number[] = outIds.tolist()[0].slice(promptLen).map(Number);
-  const codes: bigint[] = [];
-  for (const t of seq) {
-    const c = g.idToCode.get(t);
-    if (c !== undefined) codes.push(BigInt(c));
-  }
+  let codes = await gen(0.1);
+  // If a rare unstable sample still came back short for the word count, retry once.
+  if (codes.length < nTargetWords * 8) codes = await gen(0.1);
   if (codes.length < 12) throw new Error("The model produced no usable audio — try different text.");
 
   const codesTensor = new g.Tensor("int64", BigInt64Array.from(codes), [1, codes.length]);
   const { waveform } = await g.decoder({ codes: codesTensor });
-  const samples = waveform.data as Float32Array;
-  if (!samples?.length) throw new Error("Decoding produced no audio.");
-  return { samples: Float32Array.from(samples), sampleRate: 24000 };
+  const raw = waveform.data as Float32Array;
+  if (!raw?.length) throw new Error("Decoding produced no audio.");
+
+  // Peak-normalise to a consistent, audible level — the model's raw output
+  // level drifts run to run, and quiet clips read as "broken". Skip if it's
+  // effectively silent (don't amplify noise into a roar).
+  const samples = Float32Array.from(raw);
+  let peak = 0;
+  for (let i = 0; i < samples.length; i++) { const a = Math.abs(samples[i]); if (a > peak) peak = a; }
+  if (peak > 0.02) {
+    const gain = 0.95 / peak;
+    for (let i = 0; i < samples.length; i++) samples[i] *= gain;
+  }
+  return { samples, sampleRate: 24000 };
 }
