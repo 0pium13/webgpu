@@ -39,9 +39,10 @@ const nextConfig: NextConfig = {
       fs: { browser: "./src/lib/empty.ts" },
     },
   },
-  // Note: single-threaded ffmpeg core is used, so no cross-origin isolation
-  // (COOP/COEP) is required — and omitting it lets transformers.js load
-  // models + wasm from the HuggingFace / jsDelivr CDNs without CORP errors.
+  // Note: we deliberately do NOT set COEP (require-corp): the single-threaded
+  // ffmpeg core needs no cross-origin isolation, and COEP would block the
+  // HuggingFace / jsDelivr CDN loads. COOP alone (below) is safe — it only
+  // governs window.opener relationships, not subresource fetches.
   poweredByHeader: false,
   async headers() {
     return [
@@ -51,11 +52,15 @@ const nextConfig: NextConfig = {
           { key: "Content-Security-Policy", value: CSP },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
+          // isolate our browsing-context group from any window we open or that
+          // opens us — mitigates cross-window / XS-Leak attacks. Safe: the site
+          // has no OAuth popups or cross-origin window messaging.
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           // camera + mic self-allowed for the Webcam Studio (still processed
           // entirely in-tab; nothing uploaded). geolocation/payment stay off.
           { key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=(), payment=()" },
-          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
           { key: "X-DNS-Prefetch-Control", value: "on" },
         ],
       },
