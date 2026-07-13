@@ -7,7 +7,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { renderEditorPage, sampleBackground, applyEdits, type TextRun, type PdfEdit, type EditorPage } from "@/lib/pdfEdit";
+import { renderEditorPage, sampleBackground, cssFontFor, applyEdits, type TextRun, type PdfEdit, type EditorPage } from "@/lib/pdfEdit";
 import { downloadBytes } from "@/lib/pdf";
 
 export default function PdfTextEditor({ data, fileName, onBack }: { data: ArrayBuffer; fileName: string; onBack: () => void }) {
@@ -54,6 +54,9 @@ export default function PdfTextEditor({ data, fileName, onBack }: { data: ArrayB
         page: pageIdx,
         pdfX: run.pdfX, pdfY: run.pdfY, pdfW: run.pdfW, pdfSize: run.pdfSize,
         newText: value,
+        origStr: run.str,
+        fontKey: run.fontKey,
+        color: run.color,
         bg: sampleBackground(page.canvas, run),
       }]);
     }
@@ -71,7 +74,8 @@ export default function PdfTextEditor({ data, fileName, onBack }: { data: ArrayB
     if (text?.trim()) {
       setEdits((prev) => [...prev, {
         page: pageIdx, pdfX, pdfY, pdfW: 0, pdfSize: 12,
-        newText: text, bg: [1, 1, 1], isNew: true,
+        newText: text, origStr: "", fontKey: "Helvetica", color: [0, 0, 0],
+        bg: [1, 1, 1], isNew: true,
       }]);
     }
     setAddMode(false);
@@ -117,7 +121,7 @@ export default function PdfTextEditor({ data, fileName, onBack }: { data: ArrayB
         )}
       </div>
       <p className="mono" style={{ fontSize: 11, color: "var(--text-dim)" }}>
-        Hover to see editable text · click a line to retype it · replacement text uses a clean standard font
+        Hover to see editable text · click a line to retype it · font, colour and spacing are matched automatically
       </p>
 
       <div
@@ -148,24 +152,32 @@ export default function PdfTextEditor({ data, fileName, onBack }: { data: ArrayB
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.background = "transparent"; }}
               />
             ))}
-            {/* live previews of committed edits on this page */}
-            {pageEdits.map((ed, i) => !ed.isNew && page ? (
-              <div key={"ed" + i} style={{
-                position: "absolute",
-                left: `${(ed.pdfX * page.scale / page.canvas.width) * 100}%`,
-                top: `${((page.pdfH - ed.pdfY - ed.pdfSize) * page.scale / page.canvas.height) * 100}%`,
-                width: `${(Math.max(ed.pdfW, ed.pdfSize * ed.newText.length * 0.55) * page.scale / page.canvas.width) * 100}%`,
-                height: `${(ed.pdfSize * 1.35 * page.scale / page.canvas.height) * 100}%`,
-                background: `rgb(${ed.bg.map((v) => Math.round(v * 255)).join(",")})`,
-                color: "#111",
-                fontSize: `${ed.pdfSize * page.scale * (displayScale)}px`,
-                lineHeight: 1.3,
-                whiteSpace: "nowrap",
-                overflow: "visible",
-                fontFamily: "Helvetica, Arial, sans-serif",
-                outline: "1px dashed rgba(99,102,241,0.5)",
-              }}>{ed.newText}</div>
-            ) : null)}
+            {/* live previews of committed edits on this page — matched font + colour */}
+            {pageEdits.map((ed, i) => {
+              if (ed.isNew || !page) return null;
+              const css = cssFontFor(ed.fontKey);
+              return (
+                <div key={"ed" + i} style={{
+                  position: "absolute",
+                  left: `${(ed.pdfX * page.scale / page.canvas.width) * 100}%`,
+                  top: `${((page.pdfH - ed.pdfY - ed.pdfSize) * page.scale / page.canvas.height) * 100}%`,
+                  minWidth: `${(Math.max(ed.pdfW, ed.pdfSize * ed.newText.length * 0.55) * page.scale / page.canvas.width) * 100}%`,
+                  height: `${(ed.pdfSize * 1.35 * page.scale / page.canvas.height) * 100}%`,
+                  display: "flex",
+                  alignItems: "center",
+                  paddingLeft: 1,
+                  background: `rgb(${ed.bg.map((v) => Math.round(v * 255)).join(",")})`,
+                  color: `rgb(${ed.color.map((v) => Math.round(v * 255)).join(",")})`,
+                  fontSize: `${ed.pdfSize * page.scale * displayScale}px`,
+                  lineHeight: 1,
+                  whiteSpace: "nowrap",
+                  overflow: "visible",
+                  fontFamily: css.fontFamily,
+                  fontWeight: css.fontWeight,
+                  fontStyle: css.fontStyle,
+                }}>{ed.newText}</div>
+              );
+            })}
           </div>
         )}
 
