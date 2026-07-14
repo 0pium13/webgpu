@@ -8,6 +8,8 @@
  * rotoscoping studio is built on; Phase 2 will propagate masks across frames.
  */
 
+import { ortDevice } from "./gpuBackend";
+
 const MODEL_ID = "Xenova/slimsam-77-uniform";
 
 export interface SamPoint {
@@ -40,14 +42,15 @@ export async function loadSAM(onProgress?: (p: any) => void) {
     env.allowLocalModels = false;
 
     let model;
+    const want = await ortDevice(); // Safari/WebKit → wasm (ORT webgpu broken there)
     try {
-      console.time("[sam] load webgpu");
+      console.time(`[sam] load ${want}`);
       model = await SamModel.from_pretrained(MODEL_ID, {
         dtype: "fp32",
-        device: "webgpu",
+        device: want,
         progress_callback: onProgress,
       });
-      console.timeEnd("[sam] load webgpu");
+      console.timeEnd(`[sam] load ${want}`);
     } catch (e) {
       console.warn("[sam] webgpu load failed, falling back to wasm", e);
       model = await SamModel.from_pretrained(MODEL_ID, {

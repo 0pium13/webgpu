@@ -10,6 +10,8 @@
  * this is a one-shot pass per frame, so even the wasm path is acceptable.
  */
 
+import { ortDevice } from "./gpuBackend";
+
 const DETECT_MODEL = "Xenova/detr-resnet-50";
 
 export interface Detection {
@@ -35,13 +37,14 @@ export async function loadDetector(onProgress?: (p: any) => void): Promise<any> 
   detectorPromise = (async () => {
     const { pipeline, env } = await getTJ();
     env.allowLocalModels = false;
+    const want = await ortDevice(); // Safari/WebKit → wasm (ORT webgpu broken there)
     try {
       const det = await pipeline("object-detection", DETECT_MODEL, {
-        device: "webgpu",
+        device: want,
         dtype: "fp32",
         progress_callback: onProgress,
       });
-      detectDevice = "webgpu";
+      detectDevice = want;
       return det;
     } catch (e) {
       console.warn("[detect] webgpu failed, wasm fallback", e);

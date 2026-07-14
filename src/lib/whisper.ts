@@ -57,6 +57,7 @@ export const LANGUAGES: { code: string; label: string }[] = [
 ];
 
 import { toHinglish } from "./hinglish";
+import { ortDevice } from "./gpuBackend";
 
 const SAMPLE_RATE = 16000;
 const WINDOW_S = 28;
@@ -99,11 +100,15 @@ export async function loadWhisper(tier: WhisperTier = "fast", onProgress?: (p: W
         onProgress?.({ step: "download", pct: Math.round((p.loaded / p.total) * 100) });
       }
     };
+    // Only ask for webgpu where ORT's JSEP webgpu actually runs (Chromium).
+    // On Safari/WebKit it "loads" then dies at inference with
+    // "webgpuInit is not a function" → we go straight to wasm instead.
+    const want = await ortDevice();
     try {
       const asr = await pipeline("automatic-speech-recognition", id, {
-        device: "webgpu", dtype, progress_callback: cb,
+        device: want, dtype: want === "wasm" ? undefined : dtype, progress_callback: cb,
       });
-      usedDevice = "webgpu";
+      usedDevice = want;
       return asr;
     } catch (e) {
       console.warn("[whisper] webgpu failed, wasm fallback", e);

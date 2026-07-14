@@ -13,6 +13,8 @@
  * mask propagation) on top of this per-frame segmenter — see track.ts.
  */
 
+import { ortDevice } from "./gpuBackend";
+
 const MODEL_ID = "onnx-community/sam2.1-hiera-tiny-ONNX";
 
 export interface SamPoint {
@@ -50,13 +52,14 @@ export async function loadSAM(onProgress?: (p: any) => void) {
     env.allowLocalModels = false;
 
     let model;
+    const want = await ortDevice(); // Safari/WebKit → wasm (ORT webgpu broken there)
     try {
       model = await Sam2Model.from_pretrained(MODEL_ID, {
-        dtype: { vision_encoder: "fp16", prompt_encoder_mask_decoder: "fp32" },
-        device: "webgpu",
+        dtype: want === "wasm" ? "fp32" : { vision_encoder: "fp16", prompt_encoder_mask_decoder: "fp32" },
+        device: want,
         progress_callback: onProgress,
       });
-      usedDevice = "webgpu";
+      usedDevice = want;
     } catch (e) {
       console.warn("[sam2] webgpu load failed, falling back to wasm", e);
       model = await Sam2Model.from_pretrained(MODEL_ID, {

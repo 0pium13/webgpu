@@ -8,6 +8,8 @@
  * wasmPaths sidesteps both problems.
  */
 
+import { ortWebgpuUsable } from "./gpuBackend";
+
 const ORT_VERSION = "1.23.0";
 const ORT_BASE = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_VERSION}/dist`;
 
@@ -114,11 +116,16 @@ export async function createSession(
   onProgress?: (loadedBytes: number, totalBytes: number) => void,
   executionProviders: string[] = ["webgpu"]
 ): Promise<any> {
+  // Safari/WebKit exposes WebGPU but ORT's JSEP webgpu is broken there — don't
+  // even attempt it, go straight to wasm (avoids a guaranteed-failing attempt).
+  const eps = executionProviders.includes("webgpu") && !(await ortWebgpuUsable())
+    ? ["wasm"]
+    : executionProviders;
   const build = async (buf: Uint8Array) => {
     try {
-      return await ort.InferenceSession.create(buf, { executionProviders, graphOptimizationLevel: "all" });
+      return await ort.InferenceSession.create(buf, { executionProviders: eps, graphOptimizationLevel: "all" });
     } catch (e) {
-      console.warn("[ort] webgpu session failed, wasm fallback", e);
+      console.warn("[ort] session failed, wasm fallback", e);
       return await ort.InferenceSession.create(buf, { executionProviders: ["wasm"], graphOptimizationLevel: "all" });
     }
   };

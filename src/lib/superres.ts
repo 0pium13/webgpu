@@ -20,6 +20,8 @@
  * across the whole frame won't benefit much.
  */
 
+import { ortDevice } from "./gpuBackend";
+
 // Real-world degradation–trained x4 model — best for realistic photos/film frames.
 const MODEL_X4 = "Xenova/swin2SR-realworld-sr-x4-64-bsrgan-psnr";
 const NATIVE_SCALE = 4;
@@ -64,13 +66,14 @@ export async function loadSR(onProgress?: (p: SRProgress) => void): Promise<any>
       }
     };
 
+    const want = await ortDevice(); // Safari/WebKit → wasm (ORT webgpu broken there)
     try {
       const pipe = await pipeline("image-to-image", MODEL_X4, {
-        device: "webgpu",
+        device: want,
         dtype: "fp32",
         progress_callback: cb,
       });
-      usedDevice = "webgpu";
+      usedDevice = want;
       return pipe;
     } catch (e) {
       console.warn("[sr] webgpu pipeline failed, falling back to wasm", e);

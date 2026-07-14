@@ -16,6 +16,7 @@
 import { loadOrt, createSession } from "./ortRuntime";
 import { loadWhisper } from "./whisper";
 import { alignWords } from "./forcedAlign";
+import { ortDevice } from "./gpuBackend";
 
 const ENCODER_URL = "/models/wavtok_encoder.onnx";
 const CODE_RATE = 75; // tokens per second
@@ -218,10 +219,11 @@ function getGenerator(onPct: (p: number) => void) {
     };
     const tokenizer = await AutoTokenizer.from_pretrained(LLM_ID);
     let lm;
+    const want = await ortDevice(); // Safari/WebKit → wasm (ORT webgpu broken there)
     try {
       // q4 (fp32 accumulation), not q4f16 — the f16 variant generated
       // well-formed but near-silent audio codes on WebGPU
-      lm = await AutoModelForCausalLM.from_pretrained(LLM_ID, { device: "webgpu", dtype: "q4", progress_callback: cb });
+      lm = await AutoModelForCausalLM.from_pretrained(LLM_ID, { device: want, dtype: "q4", progress_callback: cb });
     } catch (e) {
       console.warn("[clone] webgpu LLM failed, wasm q4 fallback", e);
       lm = await AutoModelForCausalLM.from_pretrained(LLM_ID, { device: "wasm", dtype: "q4", progress_callback: cb });

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ImgFile } from "@/app/bg-remove/page";
 import { BgRemoveIcon } from "@/components/Icons";
+import { ortDevice } from "@/lib/gpuBackend";
 
 type Phase = "idle" | "loading-model" | "processing" | "done" | "error";
 
@@ -44,11 +45,14 @@ export default function BgRemoveProcessor({
         }
       };
 
+      // useWebGPU (from raw navigator.gpu) is true on Safari, but ORT's webgpu
+      // dies at inference there — ortDevice() gates on the reliable case only.
+      const dev = await ortDevice();
       let model: any;
       try {
         model = await AutoModel.from_pretrained("briaai/RMBG-1.4", {
           config: { model_type: "custom" } as any,
-          device: useWebGPU ? "webgpu" : "wasm",
+          device: dev,
           progress_callback: progress,
         });
       } catch (e) {

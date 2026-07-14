@@ -22,6 +22,7 @@ const BOUND = 0.87;
 const ISO = 25;
 
 import { loadOrt, createSession } from "@/lib/ortRuntime";
+import { ortDevice } from "@/lib/gpuBackend";
 
 export type To3DPhase =
   | { step: "download"; pct: number }
@@ -76,8 +77,9 @@ async function cutoutSubject(img: HTMLImageElement): Promise<HTMLCanvasElement> 
   const { AutoModel, AutoProcessor, RawImage, env } = tj;
   env.allowLocalModels = false;
   let model: any, processor: any;
+  const want = await ortDevice(); // Safari/WebKit → wasm (ORT webgpu broken there)
   try {
-    model = await AutoModel.from_pretrained("briaai/RMBG-1.4", { device: "webgpu", dtype: "fp32" });
+    model = await AutoModel.from_pretrained("briaai/RMBG-1.4", { device: want, dtype: "fp32" });
   } catch {
     model = await AutoModel.from_pretrained("briaai/RMBG-1.4", { dtype: "fp32" });
   }
