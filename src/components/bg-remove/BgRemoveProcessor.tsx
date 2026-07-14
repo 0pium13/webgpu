@@ -53,6 +53,9 @@ export default function BgRemoveProcessor({
         model = await AutoModel.from_pretrained("briaai/RMBG-1.4", {
           config: { model_type: "custom" } as any,
           device: dev,
+          // wasm/CPU can't run 4-bit — pin fp32 there so session creation
+          // doesn't throw "Missing required scale" on a quantized default.
+          dtype: dev === "wasm" ? "fp32" : undefined,
           progress_callback: progress,
         });
       } catch (e) {
@@ -61,6 +64,7 @@ export default function BgRemoveProcessor({
         model = await AutoModel.from_pretrained("briaai/RMBG-1.4", {
           config: { model_type: "custom" } as any,
           device: "wasm",
+          dtype: "fp32",
           progress_callback: progress,
         });
       }

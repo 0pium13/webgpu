@@ -104,16 +104,20 @@ export async function loadWhisper(tier: WhisperTier = "fast", onProgress?: (p: W
     // On Safari/WebKit it "loads" then dies at inference with
     // "webgpuInit is not a function" → we go straight to wasm instead.
     const want = await ortDevice();
+    // wasm/CPU can't run 4-bit (MatMulNBits) — that's WebGPU-only. Force a
+    // wasm-safe precision (fp32; fp16 isn't a wasm dtype either) or ORT throws
+    // "Missing required scale … DequantizeLinear" at session creation.
+    const wasmDtype = dtype === "fp16" ? "fp32" : dtype;
     try {
       const asr = await pipeline("automatic-speech-recognition", id, {
-        device: want, dtype: want === "wasm" ? undefined : dtype, progress_callback: cb,
+        device: want, dtype: want === "wasm" ? wasmDtype : dtype, progress_callback: cb,
       });
       usedDevice = want;
       return asr;
     } catch (e) {
-      console.warn("[whisper] webgpu failed, wasm fallback", e);
+      console.warn("[whisper] load failed, wasm fp32 fallback", e);
       const asr = await pipeline("automatic-speech-recognition", id, {
-        device: "wasm", progress_callback: cb,
+        device: "wasm", dtype: wasmDtype, progress_callback: cb,
       });
       usedDevice = "wasm";
       return asr;
