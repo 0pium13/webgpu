@@ -18,6 +18,8 @@ export default function PdfTextEditor({ data, fileName, onBack }: { data: ArrayB
   const [addMode, setAddMode] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState("");
+  const [soften, setSoften] = useState(false);
+  const softenTouched = useRef(false);
   const holderRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async (idx: number) => {
@@ -26,6 +28,8 @@ export default function PdfTextEditor({ data, fileName, onBack }: { data: ArrayB
       setEditing(null);
       const p = await renderEditorPage(data, idx);
       setPage(p);
+      // auto-match scanned pages, unless the user has set the toggle themselves
+      if (!softenTouched.current) setSoften(p.looksScanned);
       const holder = holderRef.current;
       if (holder) {
         holder.innerHTML = "";
@@ -84,7 +88,7 @@ export default function PdfTextEditor({ data, fileName, onBack }: { data: ArrayB
   async function save() {
     try {
       setBusy(true);
-      const bytes = await applyEdits(data, edits);
+      const bytes = await applyEdits(data, edits, { soften });
       downloadBytes(bytes, `${fileName.replace(/\.pdf$/i, "")}-edited.pdf`);
     } catch (e: any) {
       console.error(e);
@@ -112,6 +116,13 @@ export default function PdfTextEditor({ data, fileName, onBack }: { data: ArrayB
         <button onClick={() => setAddMode(!addMode)} style={{ ...ghost, borderColor: addMode ? "var(--accent)" : "var(--border)", color: addMode ? "var(--accent)" : "var(--text-muted)" }}>
           {addMode ? "Click the page to place text…" : "+ Add text"}
         </button>
+        <button
+          onClick={() => { softenTouched.current = true; setSoften((s) => !s); }}
+          title="Softens edited text to match scanned / low-quality pages so it doesn't look freshly typed"
+          style={{ ...ghost, borderColor: soften ? "var(--accent)" : "var(--border)", color: soften ? "var(--accent)" : "var(--text-muted)" }}
+        >
+          {soften ? "✓ Match scan quality" : "Match scan quality"}
+        </button>
         <span style={{ flex: 1 }} />
         {edits.length > 0 && (
           <>
@@ -122,6 +133,7 @@ export default function PdfTextEditor({ data, fileName, onBack }: { data: ArrayB
       </div>
       <p className="mono" style={{ fontSize: 11, color: "var(--text-dim)" }}>
         Hover to see editable text · click a line to retype it · font, colour and spacing are matched automatically
+        {page?.looksScanned && <span style={{ color: "var(--accent)" }}> · scanned page detected → &quot;Match scan quality&quot; is on so edits don&apos;t look freshly typed</span>}
       </p>
 
       <div
@@ -175,6 +187,7 @@ export default function PdfTextEditor({ data, fileName, onBack }: { data: ArrayB
                   fontFamily: css.fontFamily,
                   fontWeight: css.fontWeight,
                   fontStyle: css.fontStyle,
+                  filter: soften ? "blur(0.35px)" : "none",
                 }}>{ed.newText}</div>
               );
             })}

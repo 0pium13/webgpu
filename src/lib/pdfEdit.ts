@@ -48,6 +48,8 @@ export interface EditorPage {
   scale: number;
   pdfW: number; pdfH: number;
   numPages: number;
+  /** page looks like a scan/photocopy (noisy, off-white) → soften edits by default */
+  looksScanned: boolean;
 }
 
 /** Map a PDF font's PostScript name + generic family to a standard-14 key. */
@@ -126,8 +128,42 @@ export async function renderEditorPage(
     run.color = sampleTextColor(canvas, run);
     runs.push(run);
   }
+  const looksScanned = detectScanned(canvas);
   await task.destroy();
-  return { canvas, runs, scale, pdfW: vp1.width, pdfH: vp1.height, numPages };
+  return { canvas, runs, scale, pdfW: vp1.width, pdfH: vp1.height, numPages, looksScanned };
+}
+
+/**
+ * Guess whether a page is a scan/photocopy rather than a clean digital PDF.
+ * Scans are off-white with sensor/paper noise; digital pages are pure #FFFFFF
+ * with zero variance. We sample small patches in the margins (avoiding the
+ * centre, where a watermark or seal would skew it) and look for either noise
+ * or a non-white paper tone. If so, crisp vector edits will stand out and we
+ * default to softening them.
+ */
+function detectScanned(canvas: HTMLCanvasElement): boolean {
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+  const W = canvas.width, H = canvas.height, S = 10;
+  const spots: [number, number][] = [
+    [W * 0.5, H * 0.04], [W * 0.5, H * 0.96],           // top/bottom margins
+    [W * 0.04, H * 0.3], [W * 0.96, H * 0.3],           // left/right margins
+    [W * 0.04, H * 0.7], [W * 0.96, H * 0.7],
+  ];
+  const stds: number[] = [];
+  const means: number[] = [];
+  for (const [cx, cy] of spots) {
+    const x = clampInt(cx - S / 2, W - S), y = clampInt(cy - S / 2, H - S);
+    const d = ctx.getImageData(x, y, S, S).data;
+    const lums: number[] = [];
+    for (let i = 0; i < d.length; i += 4) lums.push(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
+    const m = lums.reduce((a, v) => a + v, 0) / lums.length;
+    const sd = Math.sqrt(lums.reduce((a, v) => a + (v - m) * (v - m), 0) / lums.length);
+    means.push(m); stds.push(sd);
+  }
+  const medStd = stds.sort((a, b) => a - b)[Math.floor(stds.length / 2)];
+  const medMean = means.sort((a, b) => a - b)[Math.floor(means.length / 2)];
+  // noisy margins, or paper that isn't paper-white → treat as scanned
+  return medStd > 3.5 || (medMean > 120 && medMean < 246);
 }
 
 /**
@@ -208,8 +244,48 @@ export function sampleTextColor(canvas: HTMLCanvasElement, r: TextRun): [number,
   return [chan("r"), chan("g"), chan("b")];
 }
 
-/** Burn all edits into a fresh copy of the PDF. */
-export async function applyEdits(data: ArrayBuffer, edits: PdfEdit[]): Promise<Uint8Array> {
+/**
+ * Render replacement text to a slightly-softened raster (a PNG) instead of
+ * crisp vector glyphs. On a scan, the original text is fixed-resolution and
+ * goes soft/pixelated when zoomed — vector text stays razor sharp and screams
+ * "edited". Rasterising at ~scan DPI with a hair of blur makes the edit
+ * degrade the same way, so it disappears into the page.
+ */
+async function renderSoftText(
+  text: string, fontKey: string, sizePt: number, color: [number, number, number]
+): Promise<{ png: Uint8Array; wPt: number; hPt: number; belowBaselinePt: number; leftPadPt: number }> {
+  const scale = 2;          // ~144 DPI — matches typical scans; pixelates like one when zoomed
+  const css = cssFontFor(fontKey);
+  const font = `${css.fontStyle} ${css.fontWeight} ${sizePt * scale}px ${css.fontFamily}`;
+  const measure = document.createElement("canvas").getContext("2d")!;
+  measure.font = font;
+  const tw = Math.max(1, Math.ceil(measure.measureText(text).width));
+  const pad = Math.ceil(3 * scale);
+  const ascent = Math.ceil(sizePt * scale * 0.92);
+  const descent = Math.ceil(sizePt * scale * 0.32);
+  const cw = tw + pad * 2, ch = ascent + descent + pad * 2;
+
+  const c = document.createElement("canvas");
+  c.width = cw; c.height = ch;
+  const ctx = c.getContext("2d")!;
+  ctx.filter = "blur(0.4px)";   // soften the crisp vector edges to scan-like
+  ctx.font = font;
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = `rgb(${color.map((v) => Math.round(v * 255)).join(",")})`;
+  ctx.fillText(text, pad, pad + ascent);
+
+  const blob = await new Promise<Blob>((res) => c.toBlob((b) => res(b!), "image/png"));
+  const png = new Uint8Array(await blob.arrayBuffer());
+  return { png, wPt: cw / scale, hPt: ch / scale, belowBaselinePt: (descent + pad) / scale, leftPadPt: pad / scale };
+}
+
+/**
+ * Burn all edits into a fresh copy of the PDF. `soften` renders replacement
+ * text as a scan-matched raster so it blends into low-quality/scanned pages.
+ */
+export async function applyEdits(
+  data: ArrayBuffer, edits: PdfEdit[], opts: { soften?: boolean } = {}
+): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb, setCharacterSpacing } = await import("pdf-lib");
   const doc = await PDFDocument.load(data, { ignoreEncryption: true });
   const pages = doc.getPages();
@@ -241,7 +317,19 @@ export async function applyEdits(data: ArrayBuffer, edits: PdfEdit[]): Promise<U
 
     if (!ed.newText.trim()) continue;
 
-    // character spacing so the run keeps the original's tracking + footprint
+    if (opts.soften) {
+      const img = await renderSoftText(ed.newText, ed.fontKey || "Helvetica", size, ed.color ?? [0, 0, 0]);
+      const emb = await doc.embedPng(img.png);
+      page.drawImage(emb, {
+        x: ed.pdfX - img.leftPadPt,
+        y: ed.pdfY - img.belowBaselinePt,
+        width: img.wPt,
+        height: img.hPt,
+      });
+      continue;
+    }
+
+    // crisp vector path: character spacing keeps the original's tracking + footprint
     let tc = 0;
     if (!ed.isNew && ed.origStr) {
       const natural = font.widthOfTextAtSize(ed.origStr, size);
