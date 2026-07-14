@@ -45,20 +45,31 @@ const MODEL_CACHE = "webgpu-models-v1";
  * changes each time, so the browser HTTP cache never hits. A cache hit here
  * makes the second load instant. All failures are non-fatal — we just fetch.
  */
+/** Drop a possibly-corrupt cached model so the next load refetches it fresh. */
+async function evictModel(url: string): Promise<void> {
+  try { const c = await caches.open(MODEL_CACHE); await c.delete(url); } catch { /* nothing to evict */ }
+}
+
 async function fetchModelBytes(
   url: string,
-  onProgress?: (loadedBytes: number, totalBytes: number) => void
-): Promise<Uint8Array> {
+  onProgress: ((loadedBytes: number, totalBytes: number) => void) | undefined,
+  skipCache: boolean
+): Promise<{ buf: Uint8Array; fromCache: boolean }> {
   let cache: Cache | null = null;
   try { cache = await caches.open(MODEL_CACHE); } catch { cache = null; }
 
-  if (cache) {
+  if (cache && !skipCache) {
     try {
       const hit = await cache.match(url);
       if (hit) {
         const buf = new Uint8Array(await hit.arrayBuffer());
-        onProgress?.(buf.byteLength, buf.byteLength);
-        return buf;
+        // guard against a truncated entry: content-length must match the body
+        const expected = Number(hit.headers.get("content-length") ?? 0);
+        if (buf.byteLength > 0 && (!expected || expected === buf.byteLength)) {
+          onProgress?.(buf.byteLength, buf.byteLength);
+          return { buf, fromCache: true };
+        }
+        await cache.delete(url); // corrupt/partial — drop and refetch
       }
     } catch { /* fall through to network */ }
   }
@@ -81,34 +92,46 @@ async function fetchModelBytes(
   for (const c of chunks) { buf.set(c, off); off += c.byteLength; }
   chunks.length = 0; // release the duplicate ~model-size of chunk memory before session compile
 
-  if (cache) {
-    // store a copy so the returned buffer stays ours; quota errors are fine
+  // Only cache a byte-complete download — never a short read that would poison
+  // future loads (the bug that can break a tool until the user clears storage).
+  if (cache && loaded > 0 && (!total || total === loaded)) {
     cache.put(url, new Response(buf.slice(), {
       headers: { "content-length": String(buf.byteLength), "content-type": "application/octet-stream" },
     })).catch(() => { /* over quota / private mode — model still works */ });
   }
-  return buf;
+  return { buf, fromCache: false };
 }
 
-/** Fetch a model file (cached) with byte-level progress, then create a session. */
+/**
+ * Fetch a model file (cached) with byte-level progress, then create a session.
+ * WebGPU first, WASM fallback. Self-healing: if the session can't be created
+ * from CACHED bytes (corruption), the entry is evicted and refetched once —
+ * so a bad cache entry can never permanently break a tool.
+ */
 export async function createSession(
   ort: any,
   url: string,
   onProgress?: (loadedBytes: number, totalBytes: number) => void,
   executionProviders: string[] = ["webgpu"]
 ): Promise<any> {
-  const buf = await fetchModelBytes(url, onProgress);
+  const build = async (buf: Uint8Array) => {
+    try {
+      return await ort.InferenceSession.create(buf, { executionProviders, graphOptimizationLevel: "all" });
+    } catch (e) {
+      console.warn("[ort] webgpu session failed, wasm fallback", e);
+      return await ort.InferenceSession.create(buf, { executionProviders: ["wasm"], graphOptimizationLevel: "all" });
+    }
+  };
 
+  const { buf, fromCache } = await fetchModelBytes(url, onProgress, false);
   try {
-    return await ort.InferenceSession.create(buf, {
-      executionProviders,
-      graphOptimizationLevel: "all",
-    });
+    return await build(buf);
   } catch (e) {
-    console.warn("[ort] webgpu session failed, wasm fallback", e);
-    return await ort.InferenceSession.create(buf, {
-      executionProviders: ["wasm"],
-      graphOptimizationLevel: "all",
-    });
+    if (!fromCache) throw e;
+    // the cached bytes wouldn't load — assume corruption, refetch fresh, retry once
+    console.warn("[ort] session failed on cached model; evicting + refetching fresh", e);
+    await evictModel(url);
+    const fresh = await fetchModelBytes(url, onProgress, true);
+    return await build(fresh.buf);
   }
 }
