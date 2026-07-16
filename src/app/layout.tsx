@@ -6,6 +6,11 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  // apex webgpu.in is the one canonical host — www redirects here. This anchors
+  // every relative metadata URL and emits <link rel="canonical"> so Google
+  // attaches the site (and its favicon) to a single hostname, not two.
+  metadataBase: new URL("https://webgpu.in"),
+  alternates: { canonical: "https://webgpu.in" },
   title: "WebGPU.in — See what your GPU can really do",
   description:
     "The community hub for browser-based GPU AI. Benchmark your GPU, explore what runs in your browser, discover tools — no install, no upload, just your hardware.",
