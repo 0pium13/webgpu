@@ -32,6 +32,51 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Sitewide entity graph. Every page's own JSON-LD points its publisher at
+ * this one Organization @id, so Google sees a single brand that owns 16
+ * pages instead of 16 unrelated documents. That entity confidence is the
+ * prerequisite for brand-level treatment in results (name, logo, and the
+ * sitelinks Google may choose to grant on its own — those can't be asked for).
+ */
+const siteJsonLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://webgpu.in/#organization",
+      name: "WebGPU.in",
+      alternateName: "WebGPU India",
+      url: "https://webgpu.in",
+      logo: {
+        "@type": "ImageObject",
+        "@id": "https://webgpu.in/#logo",
+        url: "https://webgpu.in/icon.png",
+        contentUrl: "https://webgpu.in/icon.png",
+        width: 512,
+        height: 512,
+        caption: "WebGPU.in",
+      },
+      image: { "@id": "https://webgpu.in/#logo" },
+      description:
+        "Free AI tools that run entirely in your browser on your own GPU. No upload, no watermark, no signup.",
+      sameAs: ["https://github.com/0pium13/webgpu"],
+      knowsAbout: [
+        "WebGPU", "browser AI", "local AI", "GPU benchmarking",
+        "subtitle generation", "background removal", "image upscaling",
+      ],
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://webgpu.in/#website",
+      name: "WebGPU.in",
+      url: "https://webgpu.in",
+      publisher: { "@id": "https://webgpu.in/#organization" },
+      inLanguage: "en",
+    },
+  ],
+});
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
@@ -41,6 +86,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://unpkg.com" />
         <link rel="dns-prefetch" href="https://cas-bridge.xethub.hf.co" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: siteJsonLd }}
+        />
       </head>
       <body>
         <div className="bg-field" aria-hidden />

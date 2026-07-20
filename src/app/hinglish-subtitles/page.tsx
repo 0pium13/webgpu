@@ -53,6 +53,21 @@ const jsonLd = JSON.stringify({
       name: TITLE,
       description: DESC,
       url: `${SITE}/hinglish-subtitles`,
+      isPartOf: { "@id": `${SITE}/#website` },
+      publisher: { "@id": `${SITE}/#organization` },
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": `${SITE}/hinglish-subtitles#breadcrumbs`,
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "WebGPU.in", item: SITE },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Hinglish Subtitles",
+          item: `${SITE}/hinglish-subtitles`,
+        },
+      ],
     },
     {
       "@type": "HowTo",

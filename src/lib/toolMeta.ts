@@ -272,7 +272,11 @@ export function toolMetadata(slug: string): Metadata {
   };
 }
 
-/** SoftwareApplication (+ optional FAQPage) JSON-LD for a tool. */
+/** Short display name — "Auto Subtitles" out of "Auto Subtitles — free …". */
+export const toolShortName = (slug: string) =>
+  TOOL_META[slug].appName.split("—")[0].trim();
+
+/** SoftwareApplication + BreadcrumbList (+ optional FAQPage) JSON-LD. */
 export function toolJsonLd(slug: string): string {
   const t = TOOL_META[slug];
   const graph: object[] = [
@@ -285,7 +289,24 @@ export function toolJsonLd(slug: string): string {
       applicationCategory: "MultimediaApplication",
       operatingSystem: "Any (runs in the browser)",
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-      publisher: { "@type": "Organization", name: "WebGPU.in", url: SITE },
+      // point at the sitewide entity in the root layout, not a loose copy
+      publisher: { "@id": `${SITE}/#organization` },
+      isPartOf: { "@id": `${SITE}/#website` },
+    },
+    {
+      // Gives results the "webgpu.in › Auto Subtitles" trail instead of a
+      // bare URL, and tells Google this page sits under the site root.
+      "@type": "BreadcrumbList",
+      "@id": `${SITE}/${t.slug}#breadcrumbs`,
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "WebGPU.in", item: SITE },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: toolShortName(slug),
+          item: `${SITE}/${t.slug}`,
+        },
+      ],
     },
   ];
   if (t.faqs?.length) {

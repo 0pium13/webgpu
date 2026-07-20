@@ -88,6 +88,34 @@ const jsonLd = JSON.stringify({
       name: TITLE,
       description: DESC,
       url: `${SITE}/free-ai-video-tools`,
+      isPartOf: { "@id": `${SITE}/#website` },
+      publisher: { "@id": `${SITE}/#organization` },
+    },
+    {
+      // Names every tool this hub owns. The explicit hub → child
+      // relationship is the structure Google reads when deciding a site
+      // has a real hierarchy worth surfacing.
+      "@type": "ItemList",
+      "@id": `${SITE}/free-ai-video-tools#tools`,
+      itemListElement: VIDEO_TOOLS.map((t, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        name: t.name,
+        url: `${SITE}${t.href}`,
+      })),
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": `${SITE}/free-ai-video-tools#breadcrumbs`,
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "WebGPU.in", item: SITE },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Free AI Video Tools",
+          item: `${SITE}/free-ai-video-tools`,
+        },
+      ],
     },
     {
       "@type": "FAQPage",
