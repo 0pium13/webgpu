@@ -13,6 +13,9 @@ const LINKS = [
   { name: "Webcam", href: "/webcam" },
   { name: "AI Chat", href: "/chat" },
   { name: "Vibe Coder", href: "/code" },
+  { name: "Video Tools", href: "/free-ai-video-tools" },
+  { name: "Hinglish Subs", href: "/hinglish-subtitles" },
+  { name: "No Watermark", href: "/no-watermark" },
   { name: "GitHub", href: "https://github.com/0pium13/webgpu" },
 ];
 

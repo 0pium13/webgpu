@@ -11,7 +11,10 @@ export const metadata: Metadata = {
   // attaches the site (and its favicon) to a single hostname, not two.
   metadataBase: new URL("https://webgpu.in"),
   alternates: { canonical: "https://webgpu.in" },
-  title: "WebGPU.in — See what your GPU can really do",
+  title: {
+    default: "WebGPU.in — See what your GPU can really do",
+    template: "%s | WebGPU.in",
+  },
   description:
     "The community hub for browser-based GPU AI. Benchmark your GPU, explore what runs in your browser, discover tools — no install, no upload, just your hardware.",
   keywords: ["webgpu", "browser ai", "local ai", "gpu benchmark", "webgpu tools", "run llm in browser"],

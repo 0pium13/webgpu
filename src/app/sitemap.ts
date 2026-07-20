@@ -5,6 +5,8 @@ const TOOLS = [
   "erase", "convert", "pdf", "voice", "webcam", "chat", "code",
 ];
 
+const LANDING = ["free-ai-video-tools", "hinglish-subtitles", "no-watermark"];
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://webgpu.in";
   return [
@@ -13,6 +15,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${base}/${slug}`,
       changeFrequency: "monthly" as const,
       priority: 0.8,
+    })),
+    ...LANDING.map((slug) => ({
+      url: `${base}/${slug}`,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
     })),
   ];
 }

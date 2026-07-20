@@ -414,3 +414,8 @@ body::before {
   html { scroll-behavior: auto; }
   .rise, .stagger > * { opacity: 1; }
 }
+
+/* Tool FAQ (ToolSeoSection) */
+.tool-faq summary::-webkit-details-marker { display: none; }
+.tool-faq-mark { display: inline-block; transition: transform 0.3s var(--ease-lux); }
+.tool-faq[open] .tool-faq-mark { transform: rotate(45deg); }
