@@ -13,8 +13,8 @@ export const metadata: Metadata = {
   title: TITLE,
   description: DESC,
   alternates: { canonical: "/no-watermark" },
-  openGraph: { title: TITLE, description: DESC, url: "/no-watermark", siteName: "WebGPU.in", type: "website" },
-  twitter: { card: "summary", title: TITLE, description: DESC },
+  openGraph: { title: TITLE, description: DESC, url: "/no-watermark", siteName: "WebGPU.in", type: "website", images: [{ url: "/og/no-watermark", width: 1200, height: 630 }] },
+  twitter: { card: "summary_large_image", title: TITLE, description: DESC, images: ["/og/no-watermark"] },
 };
 
 const FAQS: ToolFaq[] = [

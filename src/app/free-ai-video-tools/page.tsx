@@ -13,8 +13,8 @@ export const metadata: Metadata = {
   title: TITLE,
   description: DESC,
   alternates: { canonical: "/free-ai-video-tools" },
-  openGraph: { title: TITLE, description: DESC, url: "/free-ai-video-tools", siteName: "WebGPU.in", type: "website" },
-  twitter: { card: "summary", title: TITLE, description: DESC },
+  openGraph: { title: TITLE, description: DESC, url: "/free-ai-video-tools", siteName: "WebGPU.in", type: "website", images: [{ url: "/og/free-ai-video-tools", width: 1200, height: 630 }] },
+  twitter: { card: "summary_large_image", title: TITLE, description: DESC, images: ["/og/free-ai-video-tools"] },
 };
 
 const VIDEO_TOOLS = [

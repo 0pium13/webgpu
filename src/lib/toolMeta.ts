@@ -19,8 +19,10 @@ export type ToolMeta = {
   keywords: string[];
   /** JSON-LD SoftwareApplication name. */
   appName: string;
-  /** Visible FAQ section + FAQPage JSON-LD (top-traffic tools only). */
+  /** Visible FAQ section + FAQPage JSON-LD. */
   faqs?: ToolFaq[];
+  /** Sibling tool slugs for the contextual "More free tools" row. */
+  related?: string[];
 };
 
 export const TOOL_META: Record<string, ToolMeta> = {
@@ -35,6 +37,7 @@ export const TOOL_META: Record<string, ToolMeta> = {
       "subtitles without uploading", "whisper subtitles online",
     ],
     appName: "Auto Subtitles — free subtitle generator",
+    related: ["convert", "voice", "upscale"],
     faqs: [
       {
         q: "Is this subtitle generator really free?",
@@ -68,6 +71,7 @@ export const TOOL_META: Record<string, ToolMeta> = {
       "transparent background maker", "background eraser online", "product photo background",
     ],
     appName: "Background Remover — free, no upload",
+    related: ["erase", "upscale", "image-to-3d"],
     faqs: [
       {
         q: "Is there a watermark or resolution limit?",
@@ -97,6 +101,7 @@ export const TOOL_META: Record<string, ToolMeta> = {
       "face restoration ai", "increase image resolution", "upscaler no watermark",
     ],
     appName: "AI Upscaler — free 4K image enhancer",
+    related: ["bg-remove", "erase", "webcam"],
     faqs: [
       {
         q: "How is this different from just resizing?",
@@ -126,6 +131,7 @@ export const TOOL_META: Record<string, ToolMeta> = {
       "remove text from image", "photo cleanup ai", "inpainting free",
     ],
     appName: "Magic Eraser — free object remover",
+    related: ["bg-remove", "upscale", "rotoscope"],
     faqs: [
       {
         q: "What can I remove from a photo?",
@@ -155,6 +161,7 @@ export const TOOL_META: Record<string, ToolMeta> = {
       "video converter no upload", "convert video without watermark",
     ],
     appName: "Converter — free video & audio converter",
+    related: ["subtitles", "upscale", "pdf"],
     faqs: [
       {
         q: "Why is a no-upload converter better?",
@@ -184,6 +191,25 @@ export const TOOL_META: Record<string, ToolMeta> = {
       "video segmentation ai", "green screen without green screen",
     ],
     appName: "Rotoscope — free AI video cutout",
+    related: ["bg-remove", "erase", "convert"],
+    faqs: [
+      {
+        q: "How does one-click rotoscoping work?",
+        a: "Click the object once and a segmentation model (SAM 2 — the same family the film industry's tools build on) finds its exact outline, then tracks it across every frame. What used to be hours of hand-masking becomes a click and a scrub.",
+      },
+      {
+        q: "Can it really replace a green screen?",
+        a: "For most social and product work, yes — the cutout follows the subject without any special background. A proper green screen still wins for fine hair detail in broadcast work, but you get 90% of the result with 0% of the setup.",
+      },
+      {
+        q: "Does my video get uploaded?",
+        a: "No. Frames are processed on your own GPU in the browser. Client footage and unreleased edits never leave your machine.",
+      },
+      {
+        q: "What do I get out at the end?",
+        a: "The isolated subject with transparency, ready to composite over any background in your editor.",
+      },
+    ],
   },
   "image-to-3d": {
     slug: "image-to-3d",
@@ -195,6 +221,25 @@ export const TOOL_META: Record<string, ToolMeta> = {
       "glb generator", "image to stl", "ai 3d model generator",
     ],
     appName: "Image to 3D — free photo to 3D model",
+    related: ["bg-remove", "upscale"],
+    faqs: [
+      {
+        q: "What formats does it export?",
+        a: "GLB for games, web and AR; OBJ for 3D software like Blender; STL for 3D printing. All three, free, at full quality.",
+      },
+      {
+        q: "What kind of photos work best?",
+        a: "A single clear photo of one object — product shots, toys, furniture, sculptures. Centered subject, plain background, decent lighting. The background remover on this site makes a perfect prep step.",
+      },
+      {
+        q: "Is this good enough to 3D print?",
+        a: "For decorative prints and prototypes, yes — export the STL and slice it as usual. Precision engineering parts need real CAD; this is reconstruction from a photo, not measurement.",
+      },
+      {
+        q: "Does my photo stay on my device?",
+        a: "Yes. The reconstruction model runs in your browser — nothing is uploaded, including the generated model.",
+      },
+    ],
   },
   pdf: {
     slug: "pdf",
@@ -206,6 +251,25 @@ export const TOOL_META: Record<string, ToolMeta> = {
       "split pdf", "edit pdf text free", "private pdf tools",
     ],
     appName: "PDF Studio — free private PDF editor",
+    related: ["convert"],
+    faqs: [
+      {
+        q: "Why does it matter that PDFs aren't uploaded?",
+        a: "Because PDFs are contracts, invoices, ID scans and salary slips — exactly the documents you should never hand to a random 'free PDF site'. Here every operation runs in your browser; the file never crosses the network.",
+      },
+      {
+        q: "What can I do with my PDF?",
+        a: "Merge multiple files, split pages out, compress file size, convert, and edit text directly in the document. No page limits, no daily quota.",
+      },
+      {
+        q: "Can I really edit the text inside a PDF for free?",
+        a: "Yes — click the text and type. Most tools lock text editing behind a subscription; this one doesn't, because there's no server cost to recover.",
+      },
+      {
+        q: "Is there a file size limit?",
+        a: "No fixed limit — it depends on your device's memory. Typical contracts and reports, even at hundreds of pages, are no problem.",
+      },
+    ],
   },
   voice: {
     slug: "voice",
@@ -217,6 +281,25 @@ export const TOOL_META: Record<string, ToolMeta> = {
       "tts no character limit", "voiceover generator free",
     ],
     appName: "Voice Studio — free AI text to speech",
+    related: ["subtitles", "chat"],
+    faqs: [
+      {
+        q: "Is there a character or word limit?",
+        a: "No. Scripts, articles, full voiceovers — the voices are generated on your device, so there is no per-character bill and no monthly credit meter.",
+      },
+      {
+        q: "Which languages are supported?",
+        a: "English and Hindi lead the lineup, with more voices available in the studio. For Indian creator content — Reels voiceovers, explainer narration — the Hindi and English voices cover the vast majority of use.",
+      },
+      {
+        q: "Can I use the audio commercially?",
+        a: "Yes — the speech is generated locally by open models, and we add no watermark and claim no rights over your output.",
+      },
+      {
+        q: "What if I need a premium cloud voice?",
+        a: "The studio also accepts your own ElevenLabs API key as an optional tier — your key, your billing, used straight from the same interface.",
+      },
+    ],
   },
   webcam: {
     slug: "webcam",
@@ -228,6 +311,21 @@ export const TOOL_META: Record<string, ToolMeta> = {
       "webcam beautify", "auto frame webcam",
     ],
     appName: "Webcam Studio — real-time AI enhancer",
+    related: ["upscale", "voice"],
+    faqs: [
+      {
+        q: "What does it actually improve?",
+        a: "Live enhancement of your camera feed: AI upscaling for sharper detail, skin retouch, lighting correction and auto-framing that keeps you centered as you move — all in real time.",
+      },
+      {
+        q: "Is my camera feed sent anywhere?",
+        a: "No — and this is the tool where that matters most. The processing happens frame-by-frame on your own GPU. Nothing is recorded, streamed or stored by us.",
+      },
+      {
+        q: "Will it keep up in real time?",
+        a: "On a machine with a reasonable GPU, yes — that's the point of running on WebGPU. Older machines can lower the enhancement level to hold frame rate.",
+      },
+    ],
   },
   chat: {
     slug: "chat",
@@ -239,6 +337,25 @@ export const TOOL_META: Record<string, ToolMeta> = {
       "chatgpt alternative private", "run llm locally",
     ],
     appName: "Local AI Chat — private in-browser LLM",
+    related: ["code", "voice"],
+    faqs: [
+      {
+        q: "How is this private when it's a website?",
+        a: "The language model itself downloads into your browser and runs on your GPU. Your messages are never sent to a server — there is no server. Close the tab and the conversation is gone unless you save it.",
+      },
+      {
+        q: "Does it work offline?",
+        a: "Yes — once the model has downloaded, you can disconnect entirely and keep chatting. Useful on flights, and proof that nothing is leaving your machine.",
+      },
+      {
+        q: "Which browsers can run it?",
+        a: "Chrome, Edge or Brave on a machine with a GPU — the model engine needs full WebGPU. Safari can't run this one yet; that's a browser limitation, not a signup wall.",
+      },
+      {
+        q: "How smart is a local model?",
+        a: "Genuinely useful for drafting, summarising, coding help and questions — not at the level of the biggest cloud models. The trade is absolute privacy and zero cost, and for most day-to-day prompts it holds up well.",
+      },
+    ],
   },
   code: {
     slug: "code",
@@ -250,6 +367,25 @@ export const TOOL_META: Record<string, ToolMeta> = {
       "build app from description",
     ],
     appName: "Vibe Coder — AI app builder",
+    related: ["chat"],
+    faqs: [
+      {
+        q: "What does Vibe Coder actually do?",
+        a: "You describe an app in plain words — 'a pomodoro timer with a dark theme' — and it writes the code and runs the result live in the browser, where you can keep refining it by talking.",
+      },
+      {
+        q: "Do I need to pay for an AI model?",
+        a: "No. It can run on a local model on your GPU for free. If you want a stronger model, plug in your own OpenRouter API key — your key, your billing, your choice.",
+      },
+      {
+        q: "Which browsers does it need?",
+        a: "For the free local-model mode: Chrome, Edge or Brave with a GPU, since the model runs on WebGPU. With your own API key it's lighter on hardware.",
+      },
+      {
+        q: "Who owns the code it writes?",
+        a: "You do, fully. Copy it out and use it anywhere — no license strings, no watermark comments.",
+      },
+    ],
   },
 };
 
@@ -267,8 +403,14 @@ export function toolMetadata(slug: string): Metadata {
       url: `/${t.slug}`,
       siteName: "WebGPU.in",
       type: "website",
+      images: [{ url: `/og/${t.slug}`, width: 1200, height: 630 }],
     },
-    twitter: { card: "summary", title: t.title, description: t.description },
+    twitter: {
+      card: "summary_large_image",
+      title: t.title,
+      description: t.description,
+      images: [`/og/${t.slug}`],
+    },
   };
 }
 

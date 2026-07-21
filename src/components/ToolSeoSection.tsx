@@ -7,8 +7,53 @@ import { TOOL_META, type ToolFaq } from "@/lib/toolMeta";
  */
 export default function ToolSeoSection({ slug }: { slug: string }) {
   const t = TOOL_META[slug];
-  if (!t?.faqs?.length) return null;
-  return <FaqSection faqs={t.faqs} />;
+  if (!t?.faqs?.length && !t?.related?.length) return null;
+  return (
+    <>
+      {!!t.faqs?.length && <FaqSection faqs={t.faqs} />}
+      {!!t.related?.length && (
+        <nav
+          aria-label="Related tools"
+          style={{ maxWidth: 860, margin: "0 auto", padding: "0 24px 90px" }}
+        >
+          <span
+            className="mono"
+            style={{
+              fontSize: 11,
+              letterSpacing: "0.15em",
+              color: "var(--text-muted)",
+              textTransform: "uppercase",
+            }}
+          >
+            More free tools
+          </span>
+          <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 10 }}>
+            {t.related.map((slug2) => {
+              const r = TOOL_META[slug2];
+              if (!r) return null;
+              return (
+                <a
+                  key={slug2}
+                  href={`/${slug2}`}
+                  style={{
+                    padding: "10px 16px",
+                    border: "1px solid var(--border)",
+                    borderRadius: 10,
+                    background: "var(--surface)",
+                    fontSize: 13,
+                    color: "var(--text-secondary)",
+                    textDecoration: "none",
+                  }}
+                >
+                  {r.appName}
+                </a>
+              );
+            })}
+          </div>
+        </nav>
+      )}
+    </>
+  );
 }
 
 /** Standalone FAQ renderer, shared with the landing pages. */
