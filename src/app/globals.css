@@ -60,6 +60,11 @@ body {
   background: var(--canvas);
   min-height: 100vh;
   position: relative;
+  /* App-like: only ever scroll vertically. A stray wide element can never
+     make the page slide sideways on mobile. `clip` (not `hidden`) so it
+     doesn't turn body into a scroll container or break the fixed nav. */
+  overflow-x: clip;
+  max-width: 100%;
 }
 
 /* film grain — barely there, kills the "flat div" look */

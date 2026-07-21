@@ -34,7 +34,7 @@ export default function Footer() {
         <span className="mono text-[13px] font-medium text-fg">webgpu.in</span>
       </div>
 
-      <div className="flex items-center gap-5">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         {LINKS.map((l) => (
           <a
             key={l.name}
