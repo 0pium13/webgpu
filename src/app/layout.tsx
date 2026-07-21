@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "WebGPU.in",
-    description: "Your browser. Your GPU. Your AI.",
+    description: "Free AI tools that run entirely on your GPU. No upload, no watermark.",
     images: ["/og/home"],
   },
 };
