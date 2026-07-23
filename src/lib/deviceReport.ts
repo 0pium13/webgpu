@@ -89,9 +89,56 @@ function measureRefresh(): Promise<number> {
   });
 }
 
+/**
+ * Persisted calibration + last score, keyed per GPU. Re-calibrating the
+ * workload on every visit was the main source of score jitter: a different
+ * `iters` each run measures a slightly different regime. Locking the
+ * workload after first calibration makes every later run measure the
+ * exact same work.
+ */
+const BENCH_STORE_VER = "bench-v2";
+type BenchMemo = { iters: number; score: number };
+
+function benchMemoKey(gpuKey: string) {
+  return `webgpu.in:${BENCH_STORE_VER}:${gpuKey}`;
+}
+function readBenchMemo(gpuKey: string): BenchMemo | null {
+  try {
+    const raw = localStorage.getItem(benchMemoKey(gpuKey));
+    if (!raw) return null;
+    const m = JSON.parse(raw);
+    return typeof m?.iters === "number" && typeof m?.score === "number" ? m : null;
+  } catch {
+    return null;
+  }
+}
+function writeBenchMemo(gpuKey: string, memo: BenchMemo) {
+  try {
+    localStorage.setItem(benchMemoKey(gpuKey), JSON.stringify(memo));
+  } catch {
+    /* private mode etc. — scores just won't persist */
+  }
+}
+
+/** Background tabs are throttled hard; measuring there produces garbage. */
+async function untilVisible() {
+  if (typeof document === "undefined" || !document.hidden) return;
+  await new Promise<void>((res) => {
+    const on = () => {
+      if (!document.hidden) {
+        document.removeEventListener("visibilitychange", on);
+        res();
+      }
+    };
+    document.addEventListener("visibilitychange", on);
+  });
+}
+
 async function runBenchmark(
-  device: GPUDevice
+  device: GPUDevice,
+  gpuKey: string
 ): Promise<number> {
+  await untilVisible();
   const N = 1 << 20;
   const wg = 256;
   const data = device.createBuffer({ size: N * 4, usage: GPUBufferUsage.STORAGE });
@@ -140,23 +187,57 @@ async function runBenchmark(
   await run(64);
   await run(256);
 
-  // calibrate up to a ~200ms run so fixed scheduling overhead is negligible
-  let iters = 1024;
-  let t = await run(iters);
-  while (t < 200 && iters < 300000) {
-    iters *= 2;
-    t = await run(iters);
+  // Fixed workload: reuse the calibrated iteration count from previous
+  // visits so every run on this GPU measures identical work. Calibrate
+  // only on first visit (up to a ~200ms run so scheduling overhead is
+  // negligible), then persist.
+  const memo = readBenchMemo(gpuKey);
+  let iters = Math.max(memo?.iters ?? 0, 1024);
+
+  // Run to convergence: keep the BEST (min) time — rejecting runs disturbed
+  // by contention/compositing — and stop once a second run lands within 1%
+  // of it, i.e. the best is confirmed rather than a fluke.
+  async function converge(): Promise<number> {
+    let best = Infinity;
+    let secondBest = Infinity;
+    for (let i = 0; i < 10; i++) {
+      const tt = await run(iters);
+      if (tt < best) {
+        secondBest = best;
+        best = tt;
+      } else if (tt < secondBest) {
+        secondBest = tt;
+      }
+      if (i >= 3 && secondBest / best < 1.01) break;
+    }
+    return best;
   }
 
-  // take the BEST (min time) of several runs — rejects runs disturbed by
-  // GPU contention / compositing, giving a stable, repeatable throughput
-  let best = Infinity;
-  for (let i = 0; i < 6; i++) {
-    const tt = await run(iters);
-    if (tt < best) best = tt;
+  // Calibrate the workload so the BEST run takes ≥ ~150ms — long enough
+  // that submit/scheduling overhead is noise. Crucially this validates the
+  // memoized iters too: a calibration made under contention (page busy,
+  // background tab) produces a too-small workload and garbage GFLOPS, so
+  // if the converged best comes back suspiciously fast we grow the
+  // workload and re-measure instead of trusting the memo.
+  let best = await converge();
+  while (best < 150 && iters < 300000) {
+    iters *= 2;
+    best = await converge();
   }
+
   const flops = N * iters * 4; // 2 fma × 2 flops
-  return flops / (best / 1000) / 1e9;
+  const gflops = flops / (best / 1000) / 1e9;
+
+  // Hysteresis: scores within ±4% of the stored one are the same number in
+  // different thermal weather. Report the stored score so repeat visits
+  // don't flicker between 1,03x and 1,07x; only a genuine shift (charger
+  // unplugged, different GPU state) moves the number.
+  if (memo && Math.abs(gflops - memo.score) / memo.score < 0.04) {
+    writeBenchMemo(gpuKey, { iters, score: memo.score });
+    return memo.score;
+  }
+  writeBenchMemo(gpuKey, { iters, score: gflops });
+  return gflops;
 }
 
 function tierFromGflops(g: number): Tier {
@@ -234,7 +315,7 @@ async function runReport(
     const info = (adapter as any).info ?? {};
 
     onPhase?.("benchmark");
-    const gflops = Math.round(await runBenchmark(device));
+    const gflops = Math.round(await runBenchmark(device, gpu));
 
     onPhase?.("analyze");
     const tier = tierFromGflops(gflops);

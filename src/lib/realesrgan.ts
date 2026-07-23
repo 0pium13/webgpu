@@ -34,7 +34,12 @@ export type SRProgress =
     };
 
 export interface FrameCache {
-  tiles: Map<string, { pixels: Uint8ClampedArray; core: HTMLCanvasElement }>;
+  tiles: Map<
+    string,
+    // core is painted at (coreX*4 - ox, coreY*4 - oy): tiles carry a feathered
+    // left/top margin that cross-fades into the previously painted neighbour
+    { pixels: Uint8ClampedArray; core: HTMLCanvasElement; ox: number; oy: number }
+  >;
 }
 
 let sessionPromise: Promise<{ ort: any; session: any; inName: string; outName: string }> | null = null;
@@ -94,6 +99,93 @@ function tensorToCanvas(t: Float32Array, size: number): HTMLCanvasElement {
   return c;
 }
 
+/** Feather width in source px — must stay ≤ OVER so the window covers it. */
+const FEATHER = 6;
+
+function scanHasAlpha(d: Uint8ClampedArray): boolean {
+  for (let i = 3; i < d.length; i += 4) if (d[i] < 255) return true;
+  return false;
+}
+
+/**
+ * Bleed edge colours into transparent pixels. Canvas hands us unpremultiplied
+ * RGBA where fully-transparent pixels usually carry RGB=0 — the model would
+ * smear those black values into dark halos along every cutout edge. Growing
+ * the nearest opaque colour outward gives it honest context instead.
+ */
+function dilateIntoTransparent(id: ImageData, passes: number) {
+  const { width: w, height: h, data: d } = id;
+  const solid = new Uint8Array(w * h);
+  for (let p = 0; p < w * h; p++) solid[p] = d[p * 4 + 3] >= 8 ? 1 : 0;
+  for (let pass = 0; pass < passes; pass++) {
+    const next = solid.slice();
+    let changed = false;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const p = y * w + x;
+        if (solid[p]) continue;
+        const n =
+          x > 0 && solid[p - 1] ? p - 1 :
+          x < w - 1 && solid[p + 1] ? p + 1 :
+          y > 0 && solid[p - w] ? p - w :
+          y < h - 1 && solid[p + w] ? p + w : -1;
+        if (n >= 0) {
+          d[p * 4] = d[n * 4];
+          d[p * 4 + 1] = d[n * 4 + 1];
+          d[p * 4 + 2] = d[n * 4 + 2];
+          next[p] = 1;
+          changed = true;
+        }
+      }
+    }
+    solid.set(next);
+    if (!changed) break;
+  }
+}
+
+/**
+ * Alpha-ramp a tile's left/top edge so it cross-fades over the neighbour
+ * painted before it (tiles land in raster order), instead of butting
+ * against it with a hard seam.
+ */
+function featherLeftTop(c: HTMLCanvasElement, fx: number, fy: number) {
+  if (!fx && !fy) return;
+  const ctx = c.getContext("2d")!;
+  ctx.globalCompositeOperation = "destination-in";
+  if (fx > 0) {
+    const g = ctx.createLinearGradient(0, 0, c.width, 0);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(fx / c.width, "rgba(0,0,0,1)");
+    g.addColorStop(1, "rgba(0,0,0,1)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, c.width, c.height);
+  }
+  if (fy > 0) {
+    const g = ctx.createLinearGradient(0, 0, 0, c.height);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(fy / c.height, "rgba(0,0,0,1)");
+    g.addColorStop(1, "rgba(0,0,0,1)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, c.width, c.height);
+  }
+  ctx.globalCompositeOperation = "source-over";
+}
+
+/** Rebuild the output's alpha from the original plane, upscaled smoothly. */
+function applyAlpha(out: HTMLCanvasElement, alphaPlane: HTMLCanvasElement) {
+  const s = document.createElement("canvas");
+  s.width = out.width; s.height = out.height;
+  const sctx = s.getContext("2d")!;
+  sctx.imageSmoothingEnabled = true;
+  sctx.imageSmoothingQuality = "high";
+  sctx.drawImage(alphaPlane, 0, 0, out.width, out.height);
+  const a = sctx.getImageData(0, 0, out.width, out.height).data;
+  const octx = out.getContext("2d")!;
+  const o = octx.getImageData(0, 0, out.width, out.height);
+  for (let i = 3; i < o.data.length; i += 4) o.data[i] = a[i];
+  octx.putImageData(o, 0, 0);
+}
+
 const CHANGE_THRESHOLD = 2;
 function regionsSimilar(a: Uint8ClampedArray, b: Uint8ClampedArray): boolean {
   if (a.length !== b.length) return false;
@@ -134,6 +226,31 @@ export async function upscaleToCanvas(
   }
   const stageCtx = stage.getContext("2d", { willReadFrequently: true })!;
 
+  // Transparency: video frames are always opaque, so only images pay for the
+  // scan. When alpha exists we (1) keep the original alpha plane aside,
+  // (2) bleed edge colours into the transparent region so the model sees
+  // honest context instead of black, (3) restore smooth upscaled alpha at
+  // the end. Without this, transparent PNGs came out opaque with halos.
+  const isVideo =
+    typeof HTMLVideoElement !== "undefined" && source instanceof HTMLVideoElement;
+  let alphaPlane: HTMLCanvasElement | null = null;
+  if (!isVideo) {
+    const full = stageCtx.getImageData(0, 0, srcW, srcH);
+    if (scanHasAlpha(full.data)) {
+      alphaPlane = document.createElement("canvas");
+      alphaPlane.width = srcW; alphaPlane.height = srcH;
+      const ai = new ImageData(srcW, srcH);
+      for (let i = 0; i < srcW * srcH; i++) {
+        ai.data[i * 4] = 255; ai.data[i * 4 + 1] = 255; ai.data[i * 4 + 2] = 255;
+        ai.data[i * 4 + 3] = full.data[i * 4 + 3];
+      }
+      alphaPlane.getContext("2d")!.putImageData(ai, 0, 0);
+      dilateIntoTransparent(full, FEATHER + 2);
+      for (let i = 3; i < full.data.length; i += 4) full.data[i] = 255;
+      stageCtx.putImageData(full, 0, 0);
+    }
+  }
+
   const x4 = document.createElement("canvas");
   x4.width = srcW * SCALE; x4.height = srcH * SCALE;
   const x4ctx = x4.getContext("2d")!;
@@ -160,9 +277,18 @@ export async function upscaleToCanvas(
       const prev = prevCache?.tiles.get(key);
       const unchanged = !!prev && regionsSimilar(prev.pixels, id.data);
 
+      // Feather margins: extend the painted region a few px into the tile
+      // painted before it (left/top in raster order) and alpha-ramp that
+      // strip, so adjacent tiles cross-fade instead of butting hard — GAN
+      // tiles never agree exactly at the cut, which showed as grid seams
+      // on skies and gradients.
+      const mL = tx > 0 ? FEATHER : 0;
+      const mT = ty > 0 ? FEATHER : 0;
       let coreCanvas: HTMLCanvasElement;
+      let ox: number, oy: number;
       if (unchanged) {
         coreCanvas = prev!.core;
+        ox = prev!.ox; oy = prev!.oy;
       } else {
         const input = new ort.Tensor("float32", regionToTensor(id), [1, 3, IN, IN]);
         const out = await session.run({ [inName]: input });
@@ -170,37 +296,44 @@ export async function upscaleToCanvas(
         const outSize = IN * SCALE;
         const tileCanvas = tensorToCanvas(outT.data as Float32Array, outSize);
 
+        ox = mL * SCALE; oy = mT * SCALE;
         coreCanvas = document.createElement("canvas");
-        coreCanvas.width = cw * SCALE; coreCanvas.height = ch * SCALE;
+        coreCanvas.width = (cw + mL) * SCALE;
+        coreCanvas.height = (ch + mT) * SCALE;
         coreCanvas.getContext("2d")!.drawImage(
           tileCanvas,
-          (cx - ex) * SCALE, (cy - ey) * SCALE, cw * SCALE, ch * SCALE,
-          0, 0, cw * SCALE, ch * SCALE
+          (cx - mL - ex) * SCALE, (cy - mT - ey) * SCALE,
+          coreCanvas.width, coreCanvas.height,
+          0, 0, coreCanvas.width, coreCanvas.height
         );
+        featherLeftTop(coreCanvas, ox, oy);
       }
       const t2 = performance.now();
 
-      x4ctx.drawImage(coreCanvas, cx * SCALE, cy * SCALE);
+      x4ctx.drawImage(coreCanvas, cx * SCALE - ox, cy * SCALE - oy);
       const t3 = performance.now();
 
-      nextCache.tiles.set(key, { pixels: id.data, core: coreCanvas });
+      nextCache.tiles.set(key, { pixels: id.data, core: coreCanvas, ox, oy });
       done++;
       onProgress?.({
         phase: "tile", done, total, skipped: unchanged,
         timing: { readbackMs: t1 - t0, inferenceMs: t2 - t1, stitchMs: t3 - t2 },
-        tile: { core: coreCanvas, x: cx * SCALE, y: cy * SCALE, outW: srcW * SCALE, outH: srcH * SCALE },
+        tile: { core: coreCanvas, x: cx * SCALE - ox, y: cy * SCALE - oy, outW: srcW * SCALE, outH: srcH * SCALE },
       });
       await new Promise((r) => setTimeout(r, 0));
     }
   }
 
-  if (outScale === SCALE) return { canvas: x4, cache: nextCache };
-
-  const out2 = document.createElement("canvas");
-  out2.width = srcW * 2; out2.height = srcH * 2;
-  const o2 = out2.getContext("2d")!;
-  o2.imageSmoothingEnabled = true;
-  o2.imageSmoothingQuality = "high";
-  o2.drawImage(x4, 0, 0, out2.width, out2.height);
-  return { canvas: out2, cache: nextCache };
+  let outCanvas = x4;
+  if (outScale !== SCALE) {
+    const out2 = document.createElement("canvas");
+    out2.width = srcW * 2; out2.height = srcH * 2;
+    const o2 = out2.getContext("2d")!;
+    o2.imageSmoothingEnabled = true;
+    o2.imageSmoothingQuality = "high";
+    o2.drawImage(x4, 0, 0, out2.width, out2.height);
+    outCanvas = out2;
+  }
+  if (alphaPlane) applyAlpha(outCanvas, alphaPlane);
+  return { canvas: outCanvas, cache: nextCache };
 }
