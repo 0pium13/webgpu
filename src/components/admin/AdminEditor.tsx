@@ -172,7 +172,7 @@ export default function AdminEditor({
             disabled={busy || !dirty}
             style={{
               padding: "11px 24px", borderRadius: 10, border: "none",
-              background: "var(--accent)", color: "#fff", fontSize: 14, fontWeight: 600,
+              background: "var(--accent)", color: "var(--on-accent)", fontSize: 14, fontWeight: 600,
               cursor: busy || !dirty ? "not-allowed" : "pointer",
               opacity: busy || !dirty ? 0.45 : 1,
             }}

@@ -15,7 +15,7 @@ export default function NotFound() {
           <p style={{ fontSize: 14, color: "var(--text-muted)", lineHeight: 1.6, marginBottom: 24 }}>
             The link may be old or mistyped. All the tools are one click away from the home page.
           </p>
-          <a href="/" style={{ background: "var(--accent)", color: "#fff", borderRadius: 10, padding: "10px 22px", fontSize: 14, fontWeight: 500, textDecoration: "none" }}>
+          <a href="/" style={{ background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "10px 22px", fontSize: 14, fontWeight: 500, textDecoration: "none" }}>
             Explore the tools
           </a>
         </div>

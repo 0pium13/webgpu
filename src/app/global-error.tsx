@@ -20,7 +20,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
               The page hit an unexpected error. Nothing was uploaded — everything runs locally in your browser.
             </p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-              <button onClick={reset} style={{ background: "#6366f1", color: "#fff", border: "none", borderRadius: 10, padding: "10px 20px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+              <button onClick={reset} style={{ background: "#e4c078", color: "#16130c", border: "none", borderRadius: 10, padding: "10px 20px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
                 Try again
               </button>
               <a href="/" style={{ color: "#9a9a9a", border: "0.5px solid #2a2a2e", borderRadius: 10, padding: "10px 20px", fontSize: 14, textDecoration: "none" }}>

@@ -281,13 +281,13 @@ export default function MagicEraserStudio({ file, onReset }: { file: File; onRes
                 left: `${d.box.x1 * 100}%`, top: `${d.box.y1 * 100}%`,
                 width: `${(d.box.x2 - d.box.x1) * 100}%`, height: `${(d.box.y2 - d.box.y1) * 100}%`,
                 border: cutting === i ? "1.5px solid var(--accent)" : "1px solid rgba(129,140,248,0.55)",
-                background: cutting === i ? "rgba(99,102,241,0.20)" : "rgba(99,102,241,0.05)",
+                background: cutting === i ? "rgba(228,192,120,0.20)" : "rgba(228,192,120,0.05)",
                 borderRadius: 6, cursor: cutting !== null ? "wait" : "pointer", padding: 0,
               }}
             >
               <span className="mono" style={{
                 position: "absolute", top: -1, left: -1, transform: "translateY(-100%)",
-                background: "rgba(10,10,11,0.85)", color: cutting === i ? "var(--accent)" : "#c7d2fe",
+                background: "rgba(10,10,11,0.85)", color: cutting === i ? "var(--accent)" : "var(--text-secondary)",
                 fontSize: 10, padding: "2px 7px", borderRadius: "6px 6px 6px 0",
                 whiteSpace: "nowrap", lineHeight: 1.5, letterSpacing: "0.03em",
               }}>
@@ -374,7 +374,7 @@ const ghost: React.CSSProperties = {
   border: "0.5px solid var(--border)", borderRadius: 8, padding: "7px 14px", cursor: "pointer",
 };
 const primary: React.CSSProperties = {
-  background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10,
+  background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10,
   padding: "11px 22px", fontSize: 14, fontWeight: 500,
 };
 const secondary: React.CSSProperties = {

@@ -14,7 +14,7 @@ type Status =
   | "ready" | "working" | "error";
 
 const CHECKER = "repeating-conic-gradient(#2a2a2e 0% 25%, #18181b 0% 50%) 50% / 20px 20px";
-const ACCENT: [number, number, number] = [99, 102, 241];
+const ACCENT: [number, number, number] = [228, 192, 120];
 const GREEN: [number, number, number] = [34, 197, 94];
 
 /** Render a 0/255 mask (source-res) into a tinted RGBA canvas. */
@@ -183,13 +183,13 @@ export default function RotoscopeStudio({ input, onReset }: { input: RotoFile; o
         const w = (d.box.x2 - d.box.x1) * dims.w, h = (d.box.y2 - d.box.y1) * dims.h;
         const isSel = selected.has(i), isHov = hoverIdx === i;
         ctx.lineWidth = Math.max(1.5, dims.w / 500);
-        ctx.strokeStyle = isSel ? "rgba(99,102,241,0.95)" : isHov ? "rgba(34,197,94,0.95)" : "rgba(255,255,255,0.35)";
+        ctx.strokeStyle = isSel ? "rgba(228,192,120,0.95)" : isHov ? "rgba(34,197,94,0.95)" : "rgba(255,255,255,0.35)";
         ctx.strokeRect(x, y, w, h);
         if (isSel || isHov) {
           const label = `${d.label} ${Math.round(d.score * 100)}%`;
           const pad = fs * 0.35;
           const tw = ctx.measureText(label).width;
-          ctx.fillStyle = isSel ? "rgba(99,102,241,0.95)" : "rgba(34,197,94,0.95)";
+          ctx.fillStyle = isSel ? "rgba(228,192,120,0.95)" : "rgba(34,197,94,0.95)";
           ctx.fillRect(x, Math.max(0, y - fs - pad * 2), tw + pad * 2, fs + pad * 2);
           ctx.fillStyle = "#fff";
           ctx.fillText(label, x + pad, Math.max(0, y - fs - pad * 2) + pad);
@@ -436,7 +436,7 @@ export default function RotoscopeStudio({ input, onReset }: { input: RotoFile; o
       {/* actions */}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <button onClick={downloadCutout} disabled={!hasSelection}
-          style={{ background: hasSelection ? "var(--accent)" : "var(--surface-2)", color: hasSelection ? "#fff" : "var(--text-dim)", border: "none", borderRadius: 10, padding: "12px 22px", fontSize: 15, fontWeight: 500, cursor: hasSelection ? "pointer" : "not-allowed" }}>
+          style={{ background: hasSelection ? "var(--accent)" : "var(--surface-2)", color: hasSelection ? "var(--on-accent)" : "var(--text-dim)", border: "none", borderRadius: 10, padding: "12px 22px", fontSize: 15, fontWeight: 500, cursor: hasSelection ? "pointer" : "not-allowed" }}>
           ↓ Download cutout (PNG){selectedCount > 1 ? ` · ${selectedCount} objects` : ""}
         </button>
         <p style={{ fontSize: 13, color: "var(--text-muted)" }}>

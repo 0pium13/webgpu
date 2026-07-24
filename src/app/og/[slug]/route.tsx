@@ -60,8 +60,8 @@ export async function GET(
           justifyContent: "space-between",
           padding: 72,
           background:
-            "radial-gradient(90% 90% at 80% 0%, #1b1b3a 0%, #0a0a0b 55%)",
-          color: "#f4f4f5",
+            "radial-gradient(90% 90% at 80% 0%, #2a2113 0%, #0b0a08 55%)",
+          color: "#f5f2ea",
           fontFamily: "sans-serif",
         }}
       >
@@ -73,7 +73,7 @@ export async function GET(
               width: 44,
               height: 44,
               borderRadius: 10,
-              border: "2.5px solid #6366f1",
+              border: "2.5px solid #e4c078",
               alignItems: "center",
               justifyContent: "center",
             }}
@@ -82,7 +82,7 @@ export async function GET(
               style={{
                 width: 16,
                 height: 16,
-                border: "2.5px solid #6366f1",
+                border: "2.5px solid #e4c078",
                 borderRadius: 3,
               }}
             />
@@ -111,7 +111,7 @@ export async function GET(
                 fontWeight: 700,
                 letterSpacing: -2.5,
                 lineHeight: 1.05,
-                background: "linear-gradient(90deg, #818cf8 0%, #d946ef 100%)",
+                background: "linear-gradient(90deg, #e4c078 0%, #b8863b 100%)",
                 backgroundClip: "text",
                 color: "transparent",
               }}
@@ -123,7 +123,7 @@ export async function GET(
             style={{
               marginTop: 18,
               fontSize: 30,
-              color: "#a1a1aa",
+              color: "#a9a294",
               lineHeight: 1.35,
               maxWidth: 980,
             }}
@@ -140,13 +140,13 @@ export async function GET(
             gap: 28,
             fontSize: 24,
             letterSpacing: 4,
-            color: "#818cf8",
+            color: "#e4c078",
           }}
         >
           <div>FREE</div>
-          <div style={{ color: "#3f3f46" }}>·</div>
+          <div style={{ color: "#4a463c" }}>·</div>
           <div>NO UPLOAD</div>
-          <div style={{ color: "#3f3f46" }}>·</div>
+          <div style={{ color: "#4a463c" }}>·</div>
           <div>NO WATERMARK</div>
         </div>
       </div>

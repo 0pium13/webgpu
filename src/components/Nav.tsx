@@ -20,18 +20,18 @@ const LINKS = [
 
 /** Full names + tints (mirrors ToolsGrid) for the mobile menu. */
 const MENU = [
-  { href: "/upscale", name: "Upscaler", tint: "#818cf8" },
-  { href: "/rotoscope", name: "Rotoscope", tint: "#a78bfa" },
-  { href: "/bg-remove", name: "Background Remover", tint: "#34d399" },
-  { href: "/image-to-3d", name: "Image to 3D", tint: "#fbbf24" },
-  { href: "/subtitles", name: "Auto Subtitles", tint: "#22d3ee" },
-  { href: "/erase", name: "Magic Eraser", tint: "#fb7185" },
-  { href: "/convert", name: "Converter", tint: "#a3e635" },
-  { href: "/pdf", name: "PDF Studio", tint: "#f87171" },
-  { href: "/voice", name: "Voice Studio", tint: "#e879f9" },
-  { href: "/webcam", name: "Webcam Studio", tint: "#2dd4bf" },
-  { href: "/chat", name: "Local AI Chat", tint: "#38bdf8" },
-  { href: "/code", name: "Vibe Coder", tint: "#facc15" },
+  { href: "/upscale", name: "Upscaler", tint: "#d9b36c" },
+  { href: "/rotoscope", name: "Rotoscope", tint: "#b396c2" },
+  { href: "/bg-remove", name: "Background Remover", tint: "#85bf9e" },
+  { href: "/image-to-3d", name: "Image to 3D", tint: "#d9a441" },
+  { href: "/subtitles", name: "Auto Subtitles", tint: "#8fb5c7" },
+  { href: "/erase", name: "Magic Eraser", tint: "#c98b8b" },
+  { href: "/convert", name: "Converter", tint: "#a9b87e" },
+  { href: "/pdf", name: "PDF Studio", tint: "#c9826b" },
+  { href: "/voice", name: "Voice Studio", tint: "#c39bbb" },
+  { href: "/webcam", name: "Webcam Studio", tint: "#85b8ae" },
+  { href: "/chat", name: "Local AI Chat", tint: "#92a9c9" },
+  { href: "/code", name: "Vibe Coder", tint: "#d9c36c" },
 ];
 
 export default function Nav() {

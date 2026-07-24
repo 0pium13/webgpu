@@ -832,7 +832,7 @@ export default function WebSRVideoProcessor({
                 gap: 12, background: "rgba(10,10,11,0.5)",
               }}>
                 <button onClick={start} style={{
-                  background: "var(--accent)", color: "#fff", border: "none",
+                  background: "var(--accent)", color: "var(--on-accent)", border: "none",
                   borderRadius: 12, padding: "14px 32px", fontSize: 16, fontWeight: 500, cursor: "pointer",
                   display: "inline-flex", alignItems: "center", gap: 9,
                 }}>
@@ -909,7 +909,7 @@ export default function WebSRVideoProcessor({
                 <div style={{ textAlign: "center", padding: 24 }}>
                   <p style={{ color: "#ef4444", fontSize: 14, marginBottom: 12 }}>{msg}</p>
                   <button onClick={start} style={{
-                    background: "var(--accent)", color: "#fff", border: "none",
+                    background: "var(--accent)", color: "var(--on-accent)", border: "none",
                     borderRadius: 8, padding: "8px 18px", fontSize: 13, cursor: "pointer",
                   }}>
                     Try again
@@ -938,7 +938,7 @@ export default function WebSRVideoProcessor({
       {phase === "done" && (
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={download} style={{
-            flex: 1, background: "var(--accent)", color: "#fff", border: "none",
+            flex: 1, background: "var(--accent)", color: "var(--on-accent)", border: "none",
             borderRadius: 10, padding: "13px", fontSize: 15, fontWeight: 500, cursor: "pointer",
           }}>
             ↓ Download {scale} video ({outExt.toUpperCase()}) · {fmtBytes(outSize)}

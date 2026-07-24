@@ -7,18 +7,18 @@ import { DEFAULT_CONTENT, type SiteContent } from "@/lib/site-content";
 // Structural only — routes, icons and tints stay in code. The name/desc
 // copy comes from editable content (admin), with defaults as the fallback.
 const TOOLS = [
-  { href: "/upscale", Icon: UpscaleIcon, tint: "#818cf8" },
-  { href: "/rotoscope", Icon: RotoscopeIcon, tint: "#a78bfa" },
-  { href: "/bg-remove", Icon: BgRemoveIcon, tint: "#34d399" },
-  { href: "/image-to-3d", Icon: CubeIcon, tint: "#fbbf24" },
-  { href: "/subtitles", Icon: CaptionsIcon, tint: "#22d3ee" },
-  { href: "/erase", Icon: EraserIcon, tint: "#fb7185" },
-  { href: "/convert", Icon: ConvertIcon, tint: "#a3e635" },
-  { href: "/pdf", Icon: PdfIcon, tint: "#f87171" },
-  { href: "/voice", Icon: VoiceIcon, tint: "#e879f9" },
-  { href: "/webcam", Icon: VideocamIcon, tint: "#2dd4bf" },
-  { href: "/chat", Icon: ChatIcon, tint: "#38bdf8" },
-  { href: "/code", Icon: CodeIcon, tint: "#facc15" },
+  { href: "/upscale", Icon: UpscaleIcon, tint: "#d9b36c" },
+  { href: "/rotoscope", Icon: RotoscopeIcon, tint: "#b396c2" },
+  { href: "/bg-remove", Icon: BgRemoveIcon, tint: "#85bf9e" },
+  { href: "/image-to-3d", Icon: CubeIcon, tint: "#d9a441" },
+  { href: "/subtitles", Icon: CaptionsIcon, tint: "#8fb5c7" },
+  { href: "/erase", Icon: EraserIcon, tint: "#c98b8b" },
+  { href: "/convert", Icon: ConvertIcon, tint: "#a9b87e" },
+  { href: "/pdf", Icon: PdfIcon, tint: "#c9826b" },
+  { href: "/voice", Icon: VoiceIcon, tint: "#c39bbb" },
+  { href: "/webcam", Icon: VideocamIcon, tint: "#85b8ae" },
+  { href: "/chat", Icon: ChatIcon, tint: "#92a9c9" },
+  { href: "/code", Icon: CodeIcon, tint: "#d9c36c" },
 ];
 
 export default function ToolsGrid({

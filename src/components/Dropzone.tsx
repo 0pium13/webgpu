@@ -51,7 +51,7 @@ export default function Dropzone({
       </div>
       <p style={{ fontSize: 17, fontWeight: 500, marginBottom: 8 }}>{title}</p>
       <p style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 20 }}>{subtitle}</p>
-      <span style={{ display: "inline-block", padding: "9px 22px", background: "var(--accent)", color: "#fff", borderRadius: 8, fontSize: 14, fontWeight: 500 }}>{cta}</span>
+      <span style={{ display: "inline-block", padding: "9px 22px", background: "var(--accent)", color: "var(--on-accent)", borderRadius: 8, fontSize: 14, fontWeight: 500 }}>{cta}</span>
       <p className="mono" style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 24 }}>{footnote}</p>
     </label>
   );

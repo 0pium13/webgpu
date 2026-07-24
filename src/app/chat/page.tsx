@@ -167,7 +167,7 @@ export default function ChatPage() {
               })}
             </div>
             <button onClick={loadModel} style={{
-              background: "var(--accent)", color: "#fff", border: "none", borderRadius: 12,
+              background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 12,
               padding: "14px 32px", fontSize: 16, fontWeight: 500, cursor: "pointer",
               display: "inline-flex", alignItems: "center", gap: 9,
             }}>
@@ -264,6 +264,6 @@ export default function ChatPage() {
 }
 
 const btn: React.CSSProperties = {
-  background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10,
+  background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10,
   padding: "11px 20px", fontSize: 14, fontWeight: 500, cursor: "pointer",
 };

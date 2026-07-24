@@ -95,7 +95,7 @@ export default function VideoRotoscopeStudio({ input, onReset }: { input: RotoFi
     const ctx = ov.getContext("2d")!;
     ctx.clearRect(0, 0, dims.w, dims.h);
     const mask = maskOverride !== undefined ? maskOverride : targetMask;
-    if (mask) ctx.drawImage(tintMaskCanvas(mask, [99, 102, 241], 0.45), 0, 0);
+    if (mask) ctx.drawImage(tintMaskCanvas(mask, [228, 192, 120], 0.45), 0, 0);
     if (phase === "select") {
       const fs = Math.max(11, dims.w / 70);
       ctx.font = `600 ${fs}px system-ui`; ctx.textBaseline = "top";
@@ -103,7 +103,7 @@ export default function VideoRotoscopeStudio({ input, onReset }: { input: RotoFi
         const x = d.box.x1 * dims.w, y = d.box.y1 * dims.h;
         const sel = targetIdx === i;
         ctx.lineWidth = Math.max(1.5, dims.w / 500);
-        ctx.strokeStyle = sel ? "rgba(99,102,241,0.95)" : "rgba(255,255,255,0.3)";
+        ctx.strokeStyle = sel ? "rgba(228,192,120,0.95)" : "rgba(255,255,255,0.3)";
         ctx.strokeRect(x, y, (d.box.x2 - d.box.x1) * dims.w, (d.box.y2 - d.box.y1) * dims.h);
       });
     }
@@ -304,7 +304,7 @@ export default function VideoRotoscopeStudio({ input, onReset }: { input: RotoFi
               </div>
               <p style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>Pick one object (or click it on the frame), then track it through the whole clip.</p>
               <button onClick={startTracking} disabled={!canTrack}
-                style={{ background: canTrack ? "var(--accent)" : "var(--surface-2)", color: canTrack ? "#fff" : "var(--text-dim)", border: "none", borderRadius: 10, padding: "12px", fontSize: 15, fontWeight: 500, cursor: canTrack ? "pointer" : "not-allowed" }}>
+                style={{ background: canTrack ? "var(--accent)" : "var(--surface-2)", color: canTrack ? "var(--on-accent)" : "var(--text-dim)", border: "none", borderRadius: 10, padding: "12px", fontSize: 15, fontWeight: 500, cursor: canTrack ? "pointer" : "not-allowed" }}>
                 Track through video →
               </button>
             </>
@@ -325,7 +325,7 @@ export default function VideoRotoscopeStudio({ input, onReset }: { input: RotoFi
                   <span style={{ fontSize: 11, display: "block", color: "var(--text-dim)", marginTop: 1 }}>{sub}</span>
                 </button>
               ))}
-              <button onClick={runExport} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10, padding: "12px", fontSize: 15, fontWeight: 500, cursor: "pointer" }}>
+              <button onClick={runExport} style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "12px", fontSize: 15, fontWeight: 500, cursor: "pointer" }}>
                 ⬇ Render {exportMode} video
               </button>
               {outUrl && (

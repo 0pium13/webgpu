@@ -118,7 +118,7 @@ export default function HinglishSubtitles() {
             href="/subtitles"
             style={{
               display: "inline-block", padding: "13px 26px", borderRadius: 10,
-              background: "var(--accent)", color: "#fff", fontSize: 14, fontWeight: 600,
+              background: "var(--accent)", color: "var(--on-accent)", fontSize: 14, fontWeight: 600,
               textDecoration: "none",
             }}
           >

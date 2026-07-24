@@ -24,7 +24,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
           Everything runs in your browser, so nothing was lost or uploaded. Try again — if it keeps happening, reloading the page usually clears it.
         </p>
         <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-          <button onClick={reset} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10, padding: "10px 20px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+          <button onClick={reset} style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "10px 20px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
             Try again
           </button>
           <a href="/" style={{ background: "transparent", color: "var(--text-muted)", border: "0.5px solid var(--border)", borderRadius: 10, padding: "10px 20px", fontSize: 14, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>

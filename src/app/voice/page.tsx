@@ -237,7 +237,7 @@ export default function VoicePage() {
 
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <button onClick={generate} disabled={!text.trim() || busy} style={{
-              background: "var(--accent)", color: "#fff", border: "none", borderRadius: 12,
+              background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 12,
               padding: "13px 30px", fontSize: 15, fontWeight: 500,
               cursor: !text.trim() || busy ? "default" : "pointer",
               opacity: !text.trim() || busy ? 0.5 : 1,
@@ -264,7 +264,7 @@ export default function VoicePage() {
               <audio controls src={result.url} style={{ flex: 1, minWidth: 220, height: 38 }} />
               <span className="mono" style={{ fontSize: 11, color: "var(--text-dim)" }}>{result.secs.toFixed(1)}s</span>
               <a href={result.url} download="voiceover.wav" style={{
-                background: "var(--accent)", color: "#fff", borderRadius: 10,
+                background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10,
                 padding: "9px 18px", fontSize: 13.5, fontWeight: 500, textDecoration: "none",
               }}>
                 ↓ WAV

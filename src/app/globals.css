@@ -3,22 +3,26 @@
 /* ── design tokens ─────────────────────────────────────────────────────── */
 
 :root {
-  --accent: #6366f1;
-  --accent-2: #8b5cf6;
-  --accent-3: #d946ef;
-  --accent-dim: rgba(99, 102, 241, 0.1);
-  --accent-border: rgba(99, 102, 241, 0.25);
-  --canvas: #0a0a0b;
-  --surface: #111113;
-  --surface-2: #18181b;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-strong: rgba(255, 255, 255, 0.13);
-  --text: #f4f4f5;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-  --text-dim: #3f3f46;
-  --green: #22c55e;
-  --green-dim: rgba(34, 197, 94, 0.1);
+  /* Obsidian & Champagne — warm near-black, champagne-gold accent,
+     porcelain text. The accent is LIGHT, so text on accent surfaces
+     uses --on-accent (near-black), never white. */
+  --accent: #e4c078;
+  --accent-2: #d9a441;
+  --accent-3: #b8863b;
+  --on-accent: #16130c;
+  --accent-dim: rgba(228, 192, 120, 0.1);
+  --accent-border: rgba(228, 192, 120, 0.28);
+  --canvas: #0b0a08;
+  --surface: #14120e;
+  --surface-2: #1c1913;
+  --border: rgba(245, 240, 225, 0.08);
+  --border-strong: rgba(245, 240, 225, 0.16);
+  --text: #f5f2ea;
+  --text-secondary: #a9a294;
+  --text-muted: #857f72;
+  --text-dim: #4a463c;
+  --green: #3fb27f;
+  --green-dim: rgba(63, 178, 127, 0.1);
   --amber: #f59e0b;
   --amber-dim: rgba(245, 158, 11, 0.1);
 
@@ -92,18 +96,19 @@ body::before {
   content: '';
   position: absolute;
   inset: -20%;
+  /* candlelit pools — gold reads far louder than indigo, so alphas stay low */
   background:
-    radial-gradient(42% 34% at 18% 12%, rgba(99, 102, 241, 0.22), transparent 70%),
-    radial-gradient(36% 30% at 85% 26%, rgba(139, 92, 246, 0.17), transparent 70%),
-    radial-gradient(44% 38% at 68% 88%, rgba(34, 211, 238, 0.10), transparent 70%),
-    radial-gradient(30% 26% at 8% 78%, rgba(236, 72, 153, 0.10), transparent 70%);
+    radial-gradient(42% 34% at 18% 12%, rgba(228, 192, 120, 0.13), transparent 70%),
+    radial-gradient(36% 30% at 85% 26%, rgba(184, 134, 59, 0.11), transparent 70%),
+    radial-gradient(44% 38% at 68% 88%, rgba(245, 242, 234, 0.05), transparent 70%),
+    radial-gradient(30% 26% at 8% 78%, rgba(217, 164, 65, 0.07), transparent 70%);
   animation: field-drift 42s ease-in-out infinite alternate;
 }
 .bg-field::after {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(245, 242, 234, 0.05) 1px, transparent 1px);
   background-size: 44px 44px;
   mask-image: radial-gradient(75% 60% at 50% 38%, black, transparent);
 }
@@ -132,7 +137,7 @@ body::before {
 
 /* living gradient text — hero + headline moments */
 .grad-live {
-  background: linear-gradient(110deg, #e0e7ff, var(--accent), var(--accent-2), var(--accent-3), var(--accent-2), #e0e7ff);
+  background: linear-gradient(110deg, #f3ebd8, var(--accent), var(--accent-2), var(--accent-3), var(--accent-2), #f3ebd8);
   background-size: 300% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -183,7 +188,7 @@ body::before {
 /* eraser detection boxes — quiet until you look at them */
 .det-box { transition: background 0.18s ease, border-color 0.18s ease; }
 .det-box:hover {
-  background: rgba(99, 102, 241, 0.16) !important;
+  background: rgba(228, 192, 120, 0.16) !important;
   border-color: var(--accent) !important;
 }
 
@@ -215,7 +220,7 @@ body::before {
   width: 900px;
   height: 640px;
   transform: translateX(-50%);
-  background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.14), transparent 62%);
+  background: radial-gradient(ellipse at center, rgba(228, 192, 120, 0.1), transparent 62%);
   filter: blur(40px);
 }
 
@@ -223,7 +228,7 @@ body::before {
 
 .mono { font-family: var(--font-geist-mono), 'JetBrains Mono', ui-monospace, monospace; }
 
-::selection { background: rgba(99, 102, 241, 0.35); color: #fff; }
+::selection { background: rgba(228, 192, 120, 0.4); color: #16130c; }
 
 :focus-visible {
   outline: 2px solid var(--accent);
@@ -272,7 +277,7 @@ body::before {
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(99,102,241,0.45), rgba(255,255,255,0.09) 38%, rgba(255,255,255,0.03) 70%);
+  background: linear-gradient(135deg, rgba(228,192,120,0.45), rgba(245,242,234,0.09) 38%, rgba(245,242,234,0.03) 70%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -289,7 +294,7 @@ body::before {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgba(99,102,241,0.10), transparent 65%);
+  background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgba(228,192,120,0.08), transparent 65%);
   opacity: 0;
   transition: opacity 0.35s var(--ease-lux);
   pointer-events: none;
@@ -346,8 +351,8 @@ body::before {
 
 /* the marker orb breathes */
 @keyframes breathe {
-  0%, 100% { box-shadow: 0 0 8px 1px var(--glow, rgba(99,102,241,0.5)); }
-  50%      { box-shadow: 0 0 20px 5px var(--glow, rgba(99,102,241,0.8)); }
+  0%, 100% { box-shadow: 0 0 8px 1px var(--glow, rgba(228,192,120,0.5)); }
+  50%      { box-shadow: 0 0 20px 5px var(--glow, rgba(228,192,120,0.8)); }
 }
 
 /* endless radar ping expanding off the marker */

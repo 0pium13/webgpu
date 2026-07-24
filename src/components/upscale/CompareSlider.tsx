@@ -105,7 +105,7 @@ function badge(side: "left" | "right"): React.CSSProperties {
   return {
     position: "absolute", top: 12, [side]: 12,
     fontSize: 11, fontWeight: 500,
-    background: side === "left" ? "rgba(0,0,0,0.6)" : "rgba(99,102,241,0.7)",
+    background: side === "left" ? "rgba(0,0,0,0.6)" : "rgba(228,192,120,0.9)",
     color: "#fff", padding: "4px 10px", borderRadius: 20,
     letterSpacing: "0.06em", textTransform: "uppercase",
     pointerEvents: "none",

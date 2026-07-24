@@ -431,7 +431,7 @@ const field: React.CSSProperties = {
 };
 const primaryBtn: React.CSSProperties = {
   display: "inline-flex", alignItems: "center", gap: 7,
-  background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10,
+  background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10,
   padding: "11px 20px", fontSize: 14, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap",
 };
 const tabBtn: React.CSSProperties = {

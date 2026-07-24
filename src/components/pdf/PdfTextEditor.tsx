@@ -160,7 +160,7 @@ export default function PdfTextEditor({ data, fileName, onBack }: { data: ArrayB
                   border: "1px solid transparent",
                   transition: "border-color 0.12s, background 0.12s",
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.background = "rgba(99,102,241,0.10)"; }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.background = "rgba(228,192,120,0.10)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.background = "transparent"; }}
               />
             ))}
@@ -229,7 +229,7 @@ const ghost: React.CSSProperties = {
   border: "0.5px solid var(--border)", borderRadius: 8, padding: "7px 14px", cursor: "pointer",
 };
 const primary: React.CSSProperties = {
-  background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10,
+  background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10,
   padding: "9px 16px", fontSize: 13.5, fontWeight: 500, cursor: "pointer",
 };
 const mini: React.CSSProperties = {

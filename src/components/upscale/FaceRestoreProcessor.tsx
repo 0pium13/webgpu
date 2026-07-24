@@ -153,7 +153,7 @@ export default function FaceRestoreProcessor({
               <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 34, height: 34, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", color: "#000", fontSize: 13 }}>↔</div>
             </div>
             <span style={{ position: "absolute", top: 12, left: 12, fontSize: 11, fontWeight: 500, background: "rgba(0,0,0,0.6)", color: "#fff", padding: "4px 10px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.06em", pointerEvents: "none" }}>Original</span>
-            <span style={{ position: "absolute", top: 12, right: 12, fontSize: 11, fontWeight: 500, background: "rgba(99,102,241,0.7)", color: "#fff", padding: "4px 10px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.06em", pointerEvents: "none" }}>Restored</span>
+            <span style={{ position: "absolute", top: 12, right: 12, fontSize: 11, fontWeight: 500, background: "rgba(228,192,120,0.92)", color: "var(--on-accent)", padding: "4px 10px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.06em", pointerEvents: "none" }}>Restored</span>
           </>
         ) : (
           <>
@@ -161,7 +161,7 @@ export default function FaceRestoreProcessor({
 
             {phase === "idle" && (
               <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, background: "rgba(10,10,11,0.4)" }}>
-                <button onClick={start} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 12, padding: "14px 32px", fontSize: 16, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 9 }}>
+                <button onClick={start} style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 12, padding: "14px 32px", fontSize: 16, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 9 }}>
                   <SparkleIcon size={17} /> Restore blurry faces
                 </button>
                 <p className="mono" style={{ fontSize: 12, color: "rgba(255,255,255,0.7)" }}>GFPGAN · rebuilds sharp eyes, skin and hair from blur · runs on your GPU</p>
@@ -184,7 +184,7 @@ export default function FaceRestoreProcessor({
               <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(10,10,11,0.85)" }}>
                 <div style={{ textAlign: "center", padding: 24, maxWidth: 420 }}>
                   <p style={{ color: "#ef4444", fontSize: 14, marginBottom: 12 }}>{msg}</p>
-                  <button onClick={start} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 13, cursor: "pointer" }}>Try again</button>
+                  <button onClick={start} style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 13, cursor: "pointer" }}>Try again</button>
                 </div>
               </div>
             )}
@@ -201,7 +201,7 @@ export default function FaceRestoreProcessor({
             <Stat label="Format" value="PNG" />
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={download} style={{ flex: 1, background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10, padding: "13px", fontSize: 15, fontWeight: 500, cursor: "pointer" }}>
+            <button onClick={download} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "13px", fontSize: 15, fontWeight: 500, cursor: "pointer" }}>
               ↓ Download restored photo (PNG) · {formatBytes(outSize)}
             </button>
             <button onClick={onReset} style={{ padding: "13px 20px", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 10, fontSize: 15, color: "var(--text-muted)", cursor: "pointer" }}>

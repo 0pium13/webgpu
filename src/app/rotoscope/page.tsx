@@ -78,7 +78,7 @@ function Dropzone({ onFile }: { onFile: (f: File) => void }) {
       <div style={{ width: 56, height: 56, borderRadius: 14, background: "var(--surface-2)", border: "0.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "var(--accent)" }}><RotoscopeIcon size={26} /></div>
       <p style={{ fontSize: 17, fontWeight: 500, marginBottom: 8 }}>Drop a video or image</p>
       <p style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 20 }}>MP4, MOV, WebM · PNG, JPG</p>
-      <span style={{ display: "inline-block", padding: "9px 22px", background: "var(--accent)", color: "#fff", borderRadius: 8, fontSize: 14, fontWeight: 500 }}>Choose file</span>
+      <span style={{ display: "inline-block", padding: "9px 22px", background: "var(--accent)", color: "var(--on-accent)", borderRadius: 8, fontSize: 14, fontWeight: 500 }}>Choose file</span>
       <p className="mono" style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 24 }}>Processed locally · Nothing uploaded</p>
     </label>
   );

@@ -229,7 +229,7 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
             )}
 
             <button onClick={start} style={{
-              background: "var(--accent)", color: "#fff", border: "none", borderRadius: 12,
+              background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 12,
               padding: "14px 32px", fontSize: 16, fontWeight: 500, cursor: "pointer",
               display: "inline-flex", alignItems: "center", gap: 9,
             }}>
@@ -276,7 +276,7 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
         {phase === "error" && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, minHeight: 320 }}>
             <p style={{ color: "#ef4444", fontSize: 14 }}>{errMsg}</p>
-            <button onClick={start} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 13, cursor: "pointer" }}>Try again</button>
+            <button onClick={start} style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 13, cursor: "pointer" }}>Try again</button>
           </div>
         )}
       </div>
@@ -309,7 +309,7 @@ function Dropzone({ onFile }: { onFile: (f: File) => void }) {
       <div style={{ width: 56, height: 56, borderRadius: 14, background: "var(--surface-2)", border: "0.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "var(--accent)" }}><CaptionsIcon size={26} /></div>
       <p style={{ fontSize: 17, fontWeight: 500, marginBottom: 8 }}>Drop a video or audio file</p>
       <p style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 20 }}>MP4, MOV, WebM · MP3, WAV, M4A</p>
-      <span style={{ display: "inline-block", padding: "9px 22px", background: "var(--accent)", color: "#fff", borderRadius: 8, fontSize: 14, fontWeight: 500 }}>Choose file</span>
+      <span style={{ display: "inline-block", padding: "9px 22px", background: "var(--accent)", color: "var(--on-accent)", borderRadius: 8, fontSize: 14, fontWeight: 500 }}>Choose file</span>
       <p className="mono" style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 24 }}>Processed locally · Nothing uploaded · SRT / VTT / TXT</p>
     </label>
   );
@@ -320,7 +320,7 @@ const ghost: React.CSSProperties = {
   border: "0.5px solid var(--border)", borderRadius: 8, padding: "7px 14px", cursor: "pointer",
 };
 const primary: React.CSSProperties = {
-  background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10,
+  background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10,
   padding: "11px 18px", fontSize: 14, fontWeight: 500, cursor: "pointer",
 };
 const secondary: React.CSSProperties = {

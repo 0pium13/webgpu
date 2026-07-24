@@ -337,7 +337,7 @@ const ghost: React.CSSProperties = {
   border: "0.5px solid var(--border)", borderRadius: 8, padding: "7px 14px", cursor: "pointer",
 };
 const primary: React.CSSProperties = {
-  background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10,
+  background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10,
   padding: "11px 18px", fontSize: 14, fontWeight: 500, cursor: "pointer",
 };
 const secondary: React.CSSProperties = {

@@ -289,14 +289,14 @@ export default function WebcamStudio() {
                   <li>Hit reload below.</li>
                 </ol>
                 <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-                  <button onClick={() => location.reload()} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10, padding: "10px 22px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>Reload &amp; try again</button>
+                  <button onClick={() => location.reload()} style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "10px 22px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>Reload &amp; try again</button>
                 </div>
                 <p className="mono" style={{ fontSize: 10.5, color: "var(--text-dim)", marginTop: 14, textAlign: "center" }}>Chrome: chrome://settings/content/camera → remove localhost from Blocked</p>
               </div>
             ) : cam === "error" ? (
               <>
                 <p style={{ color: "#ef4444", fontSize: 13.5, maxWidth: 380, margin: "0 auto 14px" }}>{errMsg}</p>
-                <button onClick={start} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10, padding: "10px 22px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>Try again</button>
+                <button onClick={start} style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "10px 22px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>Try again</button>
               </>
             ) : (
               <>
@@ -305,7 +305,7 @@ export default function WebcamStudio() {
               </>
             )}
             {(cam === "idle" || cam === "starting") && (
-              <button onClick={start} disabled={cam === "starting"} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 12, padding: "12px 28px", fontSize: 15, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 9 }}>
+              <button onClick={start} disabled={cam === "starting"} style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 12, padding: "12px 28px", fontSize: 15, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 9 }}>
                 <VideocamIcon size={16} /> {cam === "starting" ? "Starting…" : "Start camera"}
               </button>
             )}
@@ -341,7 +341,7 @@ export default function WebcamStudio() {
               onPointerDown={() => set({ bypass: true })}
               onPointerUp={() => set({ bypass: false })}
               onPointerLeave={() => set({ bypass: false })}
-              style={{ background: s.bypass ? "var(--accent)" : "var(--surface-2)", color: s.bypass ? "#fff" : "var(--text-muted)", border: "0.5px solid var(--border)", borderRadius: 999, padding: "7px 16px", fontSize: 13, cursor: "pointer", userSelect: "none", touchAction: "none" }}
+              style={{ background: s.bypass ? "var(--accent)" : "var(--surface-2)", color: s.bypass ? "var(--on-accent)" : "var(--text-muted)", border: "0.5px solid var(--border)", borderRadius: 999, padding: "7px 16px", fontSize: 13, cursor: "pointer", userSelect: "none", touchAction: "none" }}
             >
               {s.bypass ? "showing original" : "⌗ Hold to compare"}
             </button>
@@ -349,7 +349,7 @@ export default function WebcamStudio() {
 
           {/* action row */}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-            <button onClick={toggleRecord} style={{ background: recording ? "var(--surface-2)" : "var(--accent)", color: recording ? "var(--text)" : "#fff", border: recording ? "0.5px solid var(--border)" : "none", borderRadius: 10, padding: "10px 20px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+            <button onClick={toggleRecord} style={{ background: recording ? "var(--surface-2)" : "var(--accent)", color: recording ? "var(--text)" : "var(--on-accent)", border: recording ? "0.5px solid var(--border)" : "none", borderRadius: 10, padding: "10px 20px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
               {recording ? "■ Stop recording" : "● Record"}
             </button>
             <button onClick={snapshot} style={ghost}>Snapshot PNG</button>

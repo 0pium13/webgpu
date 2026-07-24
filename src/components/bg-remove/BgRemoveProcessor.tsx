@@ -181,20 +181,20 @@ export default function BgRemoveProcessor({
       </div>
 
       {phase === "idle" && (
-        <button onClick={run} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10, padding: "14px", fontSize: 15, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9 }}>
+        <button onClick={run} style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "14px", fontSize: 15, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9 }}>
           <BgRemoveIcon size={17} /> Remove background
         </button>
       )}
 
       {phase === "error" && (
-        <button onClick={run} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10, padding: "14px", fontSize: 15, fontWeight: 500, cursor: "pointer" }}>
+        <button onClick={run} style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "14px", fontSize: 15, fontWeight: 500, cursor: "pointer" }}>
           Try again
         </button>
       )}
 
       {phase === "done" && (
         <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={download} style={{ flex: 1, background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10, padding: "13px", fontSize: 15, fontWeight: 500, cursor: "pointer" }}>
+          <button onClick={download} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "13px", fontSize: 15, fontWeight: 500, cursor: "pointer" }}>
             ↓ Download PNG ({formatBytes(outSize)})
           </button>
           <button onClick={onReset} style={{ padding: "13px 20px", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 10, fontSize: 15, color: "var(--text-muted)", cursor: "pointer" }}>

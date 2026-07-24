@@ -67,7 +67,7 @@ function Dropzone({ onFile }: { onFile: (f: File) => void }) {
       <div style={{ width: 56, height: 56, borderRadius: 14, background: "var(--surface-2)", border: "0.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "var(--accent)" }}><EraserIcon size={26} /></div>
       <p style={{ fontSize: 17, fontWeight: 500, marginBottom: 8 }}>Drop an image</p>
       <p style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 20 }}>JPG, PNG, WebP · any resolution</p>
-      <span style={{ display: "inline-block", padding: "9px 22px", background: "var(--accent)", color: "#fff", borderRadius: 8, fontSize: 14, fontWeight: 500 }}>Choose image</span>
+      <span style={{ display: "inline-block", padding: "9px 22px", background: "var(--accent)", color: "var(--on-accent)", borderRadius: 8, fontSize: 14, fontWeight: 500 }}>Choose image</span>
       <p className="mono" style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 24 }}>Processed locally · Nothing uploaded · Full-res PNG out</p>
     </label>
   );

@@ -60,7 +60,7 @@ export default function GPUAnalytics() {
           padding: 32,
           overflow: "hidden",
           minHeight: 220,
-          boxShadow: "0 30px 80px -40px rgba(99,102,241,0.28)",
+          boxShadow: "0 30px 80px -40px rgba(228,192,120,0.22)",
         }}
       >
         {!done ? (
@@ -237,12 +237,12 @@ function PercentileBar({ report }: { report: DeviceReport }) {
   const ticks = [25, 50, 75];
   // ember fountain: each spark rises off the marker with its own drift/tempo
   const sparks = [
-    { dx: -10, delay: 0.0, dur: 1.3, size: 3, c: "#f472b6" },
-    { dx: 7,   delay: 0.35, dur: 1.1, size: 2.5, c: "#c084fc" },
+    { dx: -10, delay: 0.0, dur: 1.3, size: 3, c: "#d9a441" },
+    { dx: 7,   delay: 0.35, dur: 1.1, size: 2.5, c: "#c39bbb" },
     { dx: -4,  delay: 0.6, dur: 1.5, size: 2, c: "#ffffff" },
-    { dx: 12,  delay: 0.85, dur: 1.2, size: 3, c: "#818cf8" },
-    { dx: 2,   delay: 1.1, dur: 1.4, size: 2, c: "#f472b6" },
-    { dx: -13, delay: 1.4, dur: 1.15, size: 2.5, c: "#34d399" },
+    { dx: 12,  delay: 0.85, dur: 1.2, size: 3, c: "#e4c078" },
+    { dx: 2,   delay: 1.1, dur: 1.4, size: 2, c: "#d9a441" },
+    { dx: -13, delay: 1.4, dur: 1.15, size: 2.5, c: "#85bf9e" },
     { dx: 5,   delay: 1.65, dur: 1.3, size: 2, c: "#ffffff" },
   ];
 
@@ -261,7 +261,7 @@ function PercentileBar({ report }: { report: DeviceReport }) {
           <div className="grad-spectrum" style={{
             position: "absolute", top: 0, bottom: 0, left: 0,
             width: p > 0 ? `${100 / (p / 100)}%` : "100%",
-            boxShadow: "0 0 18px rgba(129,140,248,0.35)",
+            boxShadow: "0 0 18px rgba(228,192,120,0.35)",
           }} />
           <span style={{
             position: "absolute", top: 0, bottom: 0, width: 60,
@@ -277,7 +277,7 @@ function PercentileBar({ report }: { report: DeviceReport }) {
             width: 4, height: 4, borderRadius: "50%",
             transform: "translate(-50%,-50%)",
             background: p >= t ? "#fff" : "var(--border-strong)",
-            boxShadow: p >= t ? "0 0 10px rgba(192,132,252,0.9)" : "none",
+            boxShadow: p >= t ? "0 0 10px rgba(228,192,120,0.9)" : "none",
             transition: "background 0.3s, box-shadow 0.3s",
           }} />
         ))}
@@ -296,16 +296,16 @@ function PercentileBar({ report }: { report: DeviceReport }) {
           <span style={{
             position: "absolute", left: "50%", top: "50%",
             width: 15, height: 15, borderRadius: "50%",
-            border: "1.5px solid #c084fc",
+            border: "1.5px solid #e4c078",
             animation: "ripple 2.2s ease-out infinite",
           }} />
           <span style={{
             position: "relative", display: "block",
             width: 16, height: 16, borderRadius: "50%",
-            background: "radial-gradient(circle at 40% 35%, #fff, #c7d2fe 55%, #818cf8)",
+            background: "radial-gradient(circle at 40% 35%, #fff, #f3e3bc 55%, #d9a441)",
             border: "2.5px solid var(--canvas)",
             animation: "breathe 2.2s ease-in-out infinite",
-            ["--glow" as string]: "rgba(165,180,252,0.75)",
+            ["--glow" as string]: "rgba(243,227,188,0.75)",
           }} />
         </div>
       </div>
@@ -410,7 +410,7 @@ function ShareCard({ report }: { report: DeviceReport }) {
           Post on 𝕏
         </button>
         <button onClick={() => { navigator.clipboard.writeText(text + " https://webgpu.in"); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-          style={{ padding: "8px 16px", background: copied ? "var(--accent)" : "var(--accent-dim)", color: copied ? "#fff" : "var(--accent)", border: "0.5px solid var(--accent-border)", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+          style={{ padding: "8px 16px", background: copied ? "var(--accent)" : "var(--accent-dim)", color: copied ? "var(--on-accent)" : "var(--accent)", border: "0.5px solid var(--accent-border)", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
           {copied ? "Copied" : "Copy"}
         </button>
       </div>

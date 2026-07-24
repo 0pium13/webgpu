@@ -175,7 +175,7 @@ export default function ImageTo3DStudio({ input, onReset }: { input: Img3DFile; 
       {/* stage */}
       <div style={{
         position: "relative", borderRadius: 16, overflow: "hidden",
-        border: "0.5px solid var(--border)", background: "radial-gradient(600px 300px at 50% 0%, rgba(99,102,241,0.08), transparent), var(--surface)",
+        border: "0.5px solid var(--border)", background: "radial-gradient(600px 300px at 50% 0%, rgba(228,192,120,0.08), transparent), var(--surface)",
         aspectRatio: "16/10", display: "flex", alignItems: "center", justifyContent: "center",
       }}>
         {phase !== "done" && (
@@ -198,7 +198,7 @@ export default function ImageTo3DStudio({ input, onReset }: { input: Img3DFile; 
               ))}
             </div>
             <button onClick={start} style={{
-              background: "var(--accent)", color: "#fff", border: "none", borderRadius: 12,
+              background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 12,
               padding: "14px 32px", fontSize: 16, fontWeight: 500, cursor: "pointer",
               display: "inline-flex", alignItems: "center", gap: 9,
             }}>
@@ -238,7 +238,7 @@ export default function ImageTo3DStudio({ input, onReset }: { input: Img3DFile; 
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(10,10,11,0.85)" }}>
             <div style={{ textAlign: "center", padding: 24 }}>
               <p style={{ color: "#ef4444", fontSize: 14, marginBottom: 12 }}>{errMsg}</p>
-              <button onClick={start} style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 13, cursor: "pointer" }}>Try again</button>
+              <button onClick={start} style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 13, cursor: "pointer" }}>Try again</button>
             </div>
           </div>
         )}
@@ -264,7 +264,7 @@ const ghost: React.CSSProperties = {
   border: "0.5px solid var(--border)", borderRadius: 8, padding: "7px 14px", cursor: "pointer",
 };
 const primary: React.CSSProperties = {
-  background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10,
+  background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10,
   padding: "11px 18px", fontSize: 14, fontWeight: 500, cursor: "pointer",
 };
 const secondary: React.CSSProperties = {

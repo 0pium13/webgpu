@@ -75,7 +75,7 @@ export default function AdminLogin({ configured }: { configured: boolean }) {
           disabled={!configured || busy || !password}
           style={{
             marginTop: 16, width: "100%", padding: "12px 14px", borderRadius: 10,
-            border: "none", background: "var(--accent)", color: "#fff",
+            border: "none", background: "var(--accent)", color: "var(--on-accent)",
             fontSize: 14, fontWeight: 600,
             cursor: !configured || busy || !password ? "not-allowed" : "pointer",
             opacity: !configured || busy || !password ? 0.5 : 1,
