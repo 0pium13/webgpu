@@ -5,6 +5,7 @@ import Nav from "@/components/Nav";
 import ModelLoader from "@/components/ModelLoader";
 import { useGPU } from "@/lib/useGPU";
 import { CaptionsIcon, SparkleIcon } from "@/components/Icons";
+import { titleProgress, titleDone } from "@/lib/bgYield";
 import {
   decodeAudio, transcribe, whisperDevice, toSRT, toVTT, toTXT,
   WHISPER_MODELS, LANGUAGES,
@@ -112,6 +113,7 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
           setDownloading(false);
           setMsg(`Listening… ${fmtT(p.doneSec)} / ${fmtT(p.totalSec)}`);
           setPct(Math.min(99, Math.round((p.doneSec / p.totalSec) * 100)));
+          titleProgress("Transcribing", (p.doneSec / p.totalSec) * 100);
           setLines(p.lines);
           // keep the newest line in view — text appearing live is the dopamine
           requestAnimationFrame(() => {
@@ -129,10 +131,12 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
       setLines(finalLines);
       setPct(100);
       setPhase("done");
+      titleDone("Subtitles ready");
     } catch (e: any) {
       console.error(e);
       setErrMsg(e?.message ?? "Something went wrong");
       setPhase("error");
+      titleProgress(null);
     }
   }
 

@@ -16,6 +16,7 @@
  */
 
 import { loadOrt, createSession } from "@/lib/ortRuntime";
+import { uiYield } from "@/lib/bgYield";
 
 const MODEL_URL = "https://huggingface.co/bukuroo/RealESRGAN-ONNX/resolve/main/real-esrgan-x4plus-128.onnx";
 const IN = 128;        // fixed model input
@@ -320,7 +321,7 @@ export async function upscaleToCanvas(
         timing: { readbackMs: t1 - t0, inferenceMs: t2 - t1, stitchMs: t3 - t2 },
         tile: { core: coreCanvas, x: cx * SCALE - ox, y: cy * SCALE - oy, outW: srcW * SCALE, outH: srcH * SCALE },
       });
-      await new Promise((r) => setTimeout(r, 0));
+      await uiYield();
     }
   }
 

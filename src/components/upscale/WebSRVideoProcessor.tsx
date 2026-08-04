@@ -25,29 +25,55 @@ function fmtBytes(b: number) {
 // then pause. After this, importExternalTexture works reliably.
 async function primeVideoFrame(video: HTMLVideoElement): Promise<void> {
   return new Promise<void>((resolve) => {
-    const done = () => { video.pause(); resolve(); };
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      video.pause();
+      resolve();
+    };
+    // rVFC never fires in a hidden tab — bail so a background start can't hang
+    setTimeout(done, 1200);
     if ((video as any).requestVideoFrameCallback) {
       (video as any).requestVideoFrameCallback(done);
-      video.play().catch(resolve);
+      video.play().catch(done);
     } else {
-      video.play().then(() => setTimeout(done, 66)).catch(resolve);
+      video.play().then(() => setTimeout(done, 66)).catch(done);
     }
   });
 }
 
-// For frame-by-frame seeks, use requestVideoFrameCallback instead of seeked —
-// it fires when the frame is actually GPU-ready, not just CPU-decoded.
+// For frame-by-frame seeks prefer requestVideoFrameCallback (fires when the
+// frame is GPU-ready, not just CPU-decoded) — but RACE it against the seeked
+// event, because rVFC goes completely silent in hidden tabs and a mid-job tab
+// switch would otherwise freeze the whole video run on the pending seek.
+// After `seeked`, a few unthrottled macrotask hops let the decode settle.
+function macrohop(): Promise<void> {
+  return new Promise((r) => {
+    const ch = new MessageChannel();
+    ch.port1.onmessage = () => { ch.port1.close(); r(); };
+    ch.port2.postMessage(0);
+  });
+}
 async function seekToFrame(video: HTMLVideoElement, t: number) {
   if (Math.abs(video.currentTime - t) < 0.002) return;
   await new Promise<void>((resolve) => {
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      video.removeEventListener("seeked", onSeeked);
+      resolve();
+    };
+    const onSeeked = async () => {
+      for (let i = 0; i < 8; i++) await macrohop();
+      done();
+    };
     if ((video as any).requestVideoFrameCallback) {
-      (video as any).requestVideoFrameCallback(() => resolve());
-      video.currentTime = t;
-    } else {
-      const h = () => { video.removeEventListener("seeked", h); resolve(); };
-      video.addEventListener("seeked", h);
-      video.currentTime = t;
+      (video as any).requestVideoFrameCallback(done);
     }
+    video.addEventListener("seeked", onSeeked);
+    video.currentTime = t;
   });
 }
 

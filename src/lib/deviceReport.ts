@@ -78,12 +78,24 @@ function getGpuName(): string {
 function measureRefresh(): Promise<number> {
   return new Promise((res) => {
     let n = 0;
+    let settled = false;
     const t0 = performance.now();
+    // rAF never fires in a hidden tab — without this guard the whole device
+    // report hangs forever when the page is opened in a background tab.
+    const bail = setTimeout(() => {
+      settled = true;
+      res(60);
+    }, 900);
     function frame() {
+      if (settled) return;
       n++;
       const dt = performance.now() - t0;
       if (dt < 350) requestAnimationFrame(frame);
-      else res(Math.round(n / (dt / 1000)));
+      else {
+        settled = true;
+        clearTimeout(bail);
+        res(Math.round(n / (dt / 1000)));
+      }
     }
     requestAnimationFrame(frame);
   });

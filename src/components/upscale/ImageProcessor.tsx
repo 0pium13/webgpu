@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { UpscaleFile, UpscaleScale } from "@/app/upscale/page";
 import { upscaleToCanvas, srDevice, type SRProgress } from "@/lib/realesrgan";
+import { titleProgress, titleDone } from "@/lib/bgYield";
 import { SparkleIcon } from "@/components/Icons";
 
 type Phase = "idle" | "loading" | "processing" | "done" | "error";
@@ -110,6 +111,7 @@ export default function ImageProcessor({
           }
         }
         setTile({ done: p.done, total: p.total });
+        titleProgress("Upscaling", (p.done / p.total) * 100);
         if (p.tile && previewRef.current) {
           const ctx = previewRef.current.getContext("2d")!;
           ctx.drawImage(p.tile.core, p.tile.x, p.tile.y);
@@ -125,10 +127,12 @@ export default function ImageProcessor({
       setOutputUrl(URL.createObjectURL(blob));
       setOutSize(blob.size);
       setPhase("done");
+      titleDone("Upscale ready");
     } catch (e: any) {
       console.error(e);
       setMsg(e?.message ?? "Something went wrong");
       setPhase("error");
+      titleProgress(null);
     }
   }
 

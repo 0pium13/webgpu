@@ -23,6 +23,7 @@ const ISO = 25;
 
 import { loadOrt, createSession } from "@/lib/ortRuntime";
 import { ortDevice } from "@/lib/gpuBackend";
+import { uiYield } from "@/lib/bgYield";
 
 export type To3DPhase =
   | { step: "download"; pct: number }
@@ -261,7 +262,7 @@ export async function imageTo3D(
         if (++pending === BATCH) { coarse.set((await queryDensity(coords, pending)).subarray(0, pending), base); base += pending; pending = 0; }
       }
       onPhase({ step: "carve", pct: Math.round(((x + 1) / RC) * 25) });
-      await new Promise((r) => setTimeout(r, 0));
+      await uiYield();
     }
     if (pending) coarse.set((await queryDensity(coords, pending)).subarray(0, pending), base);
   }
@@ -313,7 +314,7 @@ export async function imageTo3D(
         }
       }
       onPhase({ step: "carve", pct: 25 + Math.round(((x + 1) / R) * 70) });
-      await new Promise((r) => setTimeout(r, 0));
+      await uiYield();
     }
     await flush();
   }

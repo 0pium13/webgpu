@@ -23,6 +23,7 @@ import {
   type MaskResult, type SamPoint,
 } from "@/lib/sam2";
 import { detectObjects } from "@/lib/detect";
+import { uiYield } from "@/lib/bgYield";
 
 export interface Box { x1: number; y1: number; x2: number; y2: number }
 
@@ -200,7 +201,7 @@ export async function trackObject(opts: TrackOptions): Promise<FrameResult[]> {
     const r: FrameResult = { frame: i, time: t, mask, box, method, confidence, lost };
     results.push(r);
     onFrame(r, i + 1, total);
-    await new Promise((res) => setTimeout(res, 0)); // yield to UI / GPU queue
+    await uiYield(); // yield to UI / GPU queue (unthrottled in background tabs)
   }
 
   return results;

@@ -21,6 +21,7 @@
  */
 
 import { ortDevice } from "./gpuBackend";
+import { uiYield } from "@/lib/bgYield";
 
 // Real-world degradation–trained x4 model — best for realistic photos/film frames.
 const MODEL_X4 = "Xenova/swin2SR-realworld-sr-x4-64-bsrgan-psnr";
@@ -240,7 +241,7 @@ export async function upscaleToCanvas(
         timing: { readbackMs: t1 - t0, inferenceMs: t2 - t1, stitchMs: t3 - t2 },
       });
       // yield so the UI paints and the GPU queue drains
-      await new Promise((r) => setTimeout(r, 0));
+      await uiYield();
     }
   }
 
