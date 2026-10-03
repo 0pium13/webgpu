@@ -22,8 +22,9 @@ const BOUND = 0.87;
 const ISO = 25;
 
 import { loadOrt, createSession } from "@/lib/ortRuntime";
-import { ortDevice } from "@/lib/gpuBackend";
+import { tjsDevice } from "@/lib/gpuBackend";
 import { uiYield } from "@/lib/bgYield";
+import { registerModel } from "@/lib/modelRegistry";
 
 export type To3DPhase =
   | { step: "download"; pct: number }
@@ -41,6 +42,7 @@ export interface Mesh3D {
 }
 
 let sessionsPromise: Promise<{ ort: any; encoder: any; backbone: any; decoder: any }> | null = null;
+registerModel(["/image-to-3d"], () => { const p = sessionsPromise; sessionsPromise = null; return p; });
 
 function loadSessions(onProgress?: (pct: number) => void) {
   if (sessionsPromise) return sessionsPromise;
@@ -78,7 +80,7 @@ async function cutoutSubject(img: HTMLImageElement): Promise<HTMLCanvasElement> 
   const { AutoModel, AutoProcessor, RawImage, env } = tj;
   env.allowLocalModels = false;
   let model: any, processor: any;
-  const want = await ortDevice(); // Safari/WebKit → wasm (ORT webgpu broken there)
+  const want = await tjsDevice(); // Safari <26 / unknown WebKit → wasm
   try {
     model = await AutoModel.from_pretrained("briaai/RMBG-1.4", { device: want, dtype: "fp32" });
   } catch {
@@ -98,6 +100,8 @@ async function cutoutSubject(img: HTMLImageElement): Promise<HTMLCanvasElement> 
   const id = ctx.getImageData(0, 0, raw.width, raw.height);
   for (let i = 0; i < mask.data.length; i++) id.data[i * 4 + 3] = mask.data[i];
   ctx.putImageData(id, 0, 0);
+  // one-shot cutout: free the session instead of leaking one per run
+  try { await model.dispose?.(); } catch { /* already released */ }
   return c;
 }
 

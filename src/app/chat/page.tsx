@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import Nav from "@/components/Nav";
 import ModelLoader from "@/components/ModelLoader";
 import { ChatIcon, SparkleIcon } from "@/components/Icons";
+import { keepModelsCached } from "@/lib/storage";
 
 const MODELS = [
   {
@@ -48,6 +49,13 @@ export default function ChatPage() {
   const [draft, setDraft] = useState("");
   const [tokSec, setTokSec] = useState(0);
   const engineRef = useRef<any>(null);
+  // Leaving the page (client-side nav keeps modules alive): unload the
+  // 1–4GB WebLLM model so the next tool starts with free VRAM.
+  useEffect(() => () => {
+    const engine = engineRef.current;
+    engineRef.current = null;
+    engine?.unload?.().catch?.(() => {});
+  }, []);
   const stopRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -60,6 +68,7 @@ export default function ChatPage() {
       setPhase("loading");
       setLoadMsg("Preparing…");
       const webllm = await import("@mlc-ai/web-llm");
+      void keepModelsCached();
       engineRef.current = await webllm.CreateMLCEngine(modelId, {
         initProgressCallback: (p: { text: string; progress?: number }) => {
           setLoadMsg(p.text);

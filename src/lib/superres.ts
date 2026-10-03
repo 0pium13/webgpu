@@ -20,7 +20,7 @@
  * across the whole frame won't benefit much.
  */
 
-import { ortDevice } from "./gpuBackend";
+import { tjsDevice } from "./gpuBackend";
 import { uiYield } from "@/lib/bgYield";
 
 // Real-world degradation–trained x4 model — best for realistic photos/film frames.
@@ -67,7 +67,7 @@ export async function loadSR(onProgress?: (p: SRProgress) => void): Promise<any>
       }
     };
 
-    const want = await ortDevice(); // Safari/WebKit → wasm (ORT webgpu broken there)
+    const want = await tjsDevice(); // Safari <26 / unknown WebKit → wasm
     try {
       const pipe = await pipeline("image-to-image", MODEL_X4, {
         device: want,

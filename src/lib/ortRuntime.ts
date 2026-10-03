@@ -9,6 +9,7 @@
  */
 
 import { ortWebgpuUsable } from "./gpuBackend";
+import { keepModelsCached } from "./storage";
 
 const ORT_VERSION = "1.23.0";
 const ORT_BASE = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_VERSION}/dist`;
@@ -116,6 +117,7 @@ export async function createSession(
   onProgress?: (loadedBytes: number, totalBytes: number) => void,
   executionProviders: string[] = ["webgpu"]
 ): Promise<any> {
+  void keepModelsCached();
   // Safari/WebKit exposes WebGPU but ORT's JSEP webgpu is broken there — don't
   // even attempt it, go straight to wasm (avoids a guaranteed-failing attempt).
   const eps = executionProviders.includes("webgpu") && !(await ortWebgpuUsable())

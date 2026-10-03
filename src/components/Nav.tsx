@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
@@ -53,7 +54,7 @@ export default function Nav() {
   return (
     <>
       <nav className="fixed inset-x-0 top-0 z-100 flex h-14 items-center justify-between border-b border-line bg-canvas/70 px-5 backdrop-blur-xl sm:px-8">
-        <a href="/" className="group flex items-center gap-2.5 no-underline">
+        <Link href="/" className="group flex items-center gap-2.5 no-underline">
           <svg
             width="20" height="20" viewBox="0 0 24 24" fill="none"
             stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
@@ -64,14 +65,14 @@ export default function Nav() {
             <path d="M15 2v2M9 2v2M15 20v2M9 20v2M2 15h2M2 9h2M20 15h2M20 9h2" />
           </svg>
           <span className="mono text-[15px] font-medium tracking-tight text-fg">webgpu.in</span>
-        </a>
+        </Link>
 
         {/* Desktop: the full link row. */}
         <div className="hidden items-center gap-1 md:flex">
           {LINKS.map((l) => {
             const active = pathname === l.href;
             return (
-              <a
+              <Link
                 key={l.href}
                 href={l.href}
                 data-active={active}
@@ -82,7 +83,7 @@ export default function Nav() {
                 }`}
               >
                 {l.label}
-              </a>
+              </Link>
             );
           })}
         </div>
@@ -120,7 +121,7 @@ export default function Nav() {
           {MENU.map((t, i) => {
             const active = pathname === t.href;
             return (
-              <a
+              <Link
                 key={t.href}
                 href={t.href}
                 onClick={() => setOpen(false)}
@@ -143,7 +144,7 @@ export default function Nav() {
                 <span className="block text-[13.5px] font-medium leading-snug text-fg">
                   {t.name}
                 </span>
-              </a>
+              </Link>
             );
           })}
         </div>

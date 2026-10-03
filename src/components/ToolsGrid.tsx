@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback } from "react";
 import { UpscaleIcon, RotoscopeIcon, BgRemoveIcon, CubeIcon, CaptionsIcon, EraserIcon, ConvertIcon, ChatIcon, PdfIcon, VoiceIcon, VideocamIcon, CodeIcon } from "./Icons";
 import { DEFAULT_CONTENT, type SiteContent } from "@/lib/site-content";
@@ -39,7 +40,7 @@ export default function ToolsGrid({
         {TOOLS.map((t) => {
           const c = tools[t.href] ?? DEFAULT_CONTENT.tools[t.href];
           return (
-          <a
+          <Link
             key={t.href}
             href={t.href}
             onMouseMove={track}
@@ -60,7 +61,7 @@ export default function ToolsGrid({
               </span>
             </p>
             <p className="text-[13px] leading-relaxed text-muted-fg">{c.desc}</p>
-          </a>
+          </Link>
           );
         })}
       </div>

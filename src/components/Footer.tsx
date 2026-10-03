@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 const LINKS = [
   { name: "Upscaler", href: "/upscale" },
   { name: "Rotoscope", href: "/rotoscope" },
@@ -35,15 +37,15 @@ export default function Footer() {
       </div>
 
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        {LINKS.map((l) => (
-          <a
-            key={l.name}
-            href={l.href}
-            className="text-[12.5px] text-muted-fg no-underline transition-colors duration-200 hover:text-fg"
-          >
-            {l.name}
-          </a>
-        ))}
+        {LINKS.map((l) => {
+          const cls = "text-[12.5px] text-muted-fg no-underline transition-colors duration-200 hover:text-fg";
+          // internal routes navigate instantly; external links stay plain
+          return l.href.startsWith("/") ? (
+            <Link key={l.name} href={l.href} className={cls}>{l.name}</Link>
+          ) : (
+            <a key={l.name} href={l.href} className={cls} target="_blank" rel="noopener noreferrer">{l.name}</a>
+          );
+        })}
       </div>
 
       <p className="mono text-[11px] text-dim-fg">Nothing uploaded, ever.</p>

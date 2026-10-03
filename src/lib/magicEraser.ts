@@ -14,6 +14,7 @@
  */
 
 import { loadOrt, createSession } from "./ortRuntime";
+import { registerModel } from "@/lib/modelRegistry";
 
 const MODEL_URL =
   "https://huggingface.co/Carve/LaMa-ONNX/resolve/main/lama_fp32.onnx";
@@ -24,6 +25,7 @@ export type EraserPhase =
   | { step: "inpaint" };
 
 let sessionPromise: Promise<any> | null = null;
+registerModel(["/erase"], () => { const p = sessionPromise; sessionPromise = null; return p; });
 
 export function loadEraser(onProgress?: (p: EraserPhase) => void) {
   if (sessionPromise) return sessionPromise;

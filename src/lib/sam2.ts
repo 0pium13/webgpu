@@ -13,7 +13,8 @@
  * mask propagation) on top of this per-frame segmenter — see track.ts.
  */
 
-import { ortDevice } from "./gpuBackend";
+import { tjsDevice } from "./gpuBackend";
+import { registerModel } from "@/lib/modelRegistry";
 
 const MODEL_ID = "onnx-community/sam2.1-hiera-tiny-ONNX";
 
@@ -38,6 +39,7 @@ export interface MaskResult {
 }
 
 let modelPromise: Promise<{ model: any; processor: any; Tensor: any; RawImage: any }> | null = null;
+registerModel(["/erase", "/rotoscope"], () => { const p = modelPromise; modelPromise = null; return p; });
 let usedDevice: "webgpu" | "wasm" = "webgpu";
 
 export function samDevice() {
@@ -52,7 +54,7 @@ export async function loadSAM(onProgress?: (p: any) => void) {
     env.allowLocalModels = false;
 
     let model;
-    const want = await ortDevice(); // Safari/WebKit → wasm (ORT webgpu broken there)
+    const want = await tjsDevice(); // Safari <26 / unknown WebKit → wasm
     try {
       model = await Sam2Model.from_pretrained(MODEL_ID, {
         dtype: want === "wasm" ? "fp32" : { vision_encoder: "fp16", prompt_encoder_mask_decoder: "fp32" },

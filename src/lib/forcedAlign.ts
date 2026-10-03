@@ -1,3 +1,4 @@
+import { registerModel } from "@/lib/modelRegistry";
 "use client";
 
 /**
@@ -18,6 +19,7 @@ const VOCAB: Record<string, number> = {
 const BLANK = 0;
 
 let alignerPromise: Promise<{ processor: any; model: any }> | null = null;
+registerModel(["/voice"], () => { const p = alignerPromise; alignerPromise = null; return p; });
 
 export function loadAligner(onPct?: (p: number) => void) {
   if (alignerPromise) return alignerPromise;

@@ -130,9 +130,12 @@ body::before {
     animation: page-in 0.55s var(--ease-lux) both;
   }
 }
+/* transform-only on purpose: content that first paints at opacity 0 is
+   ignored by Chrome's LCP and never re-reported when it fades in — tool
+   pages scored NO_LCP on mobile Lighthouse because of it. */
 @keyframes page-in {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { transform: translateY(10px); }
+  to   { transform: translateY(0); }
 }
 
 /* living gradient text — hero + headline moments */

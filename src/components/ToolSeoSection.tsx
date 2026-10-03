@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { TOOL_META, type ToolFaq } from "@/lib/toolMeta";
 
 /**
@@ -32,7 +33,7 @@ export default function ToolSeoSection({ slug }: { slug: string }) {
               const r = TOOL_META[slug2];
               if (!r) return null;
               return (
-                <a
+                <Link
                   key={slug2}
                   href={`/${slug2}`}
                   style={{
@@ -46,7 +47,7 @@ export default function ToolSeoSection({ slug }: { slug: string }) {
                   }}
                 >
                   {r.appName}
-                </a>
+                </Link>
               );
             })}
           </div>

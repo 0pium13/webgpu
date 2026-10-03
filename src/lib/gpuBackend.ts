@@ -40,7 +40,45 @@ export async function ortWebgpuUsable(): Promise<boolean> {
   return cached;
 }
 
-/** Convenience: the device string transformers.js should load with. */
-export async function ortDevice(): Promise<"webgpu" | "wasm"> {
-  return (await ortWebgpuUsable()) ? "webgpu" : "wasm";
+/**
+ * Safari's major version from `Version/N` — present in desktop Safari and iOS
+ * Safari UAs. Third-party iOS browsers (CriOS, FxiOS…) omit it, so they get
+ * null and stay on wasm: we can't tell which WebKit they're running.
+ */
+function safariMajor(): number | null {
+  if (typeof navigator === "undefined") return null;
+  const ua = navigator.userAgent;
+  if (/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua)) return null;
+  const m = ua.match(/Version\/(\d+)/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+let tjsCached: boolean | null = null;
+
+/**
+ * transformers.js ≥4.3 ships its own native WebGPU runtime (ORT 1.31) that
+ * works on Safari 26+, unlike the CDN ORT 1.23 JSEP build behind
+ * ortWebgpuUsable(). So transformers.js tools get WebGPU on Chromium AND on
+ * Safari ≥26; older or unidentifiable WebKit stays on wasm.
+ */
+export async function tjsWebgpuUsable(): Promise<boolean> {
+  if (tjsCached !== null) return tjsCached;
+  try {
+    const gpu = (navigator as any)?.gpu;
+    if (!gpu) { tjsCached = false; return false; }
+    if (isWebKit()) {
+      const v = safariMajor();
+      if (v === null || v < 26) { tjsCached = false; return false; }
+    }
+    const adapter = await gpu.requestAdapter();
+    tjsCached = !!adapter;
+  } catch {
+    tjsCached = false;
+  }
+  return tjsCached;
+}
+
+/** The device string transformers.js should load with. */
+export async function tjsDevice(): Promise<"webgpu" | "wasm"> {
+  return (await tjsWebgpuUsable()) ? "webgpu" : "wasm";
 }

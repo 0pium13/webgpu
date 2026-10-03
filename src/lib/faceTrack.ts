@@ -1,5 +1,7 @@
 "use client";
 
+import { registerModel } from "@/lib/modelRegistry";
+
 /**
  * MediaPipe Face Landmarker wrapper — real-time 468-point face mesh, GPU
  * delegate, VIDEO mode. Self-hosted wasm + model so nothing leaves the tab
@@ -8,6 +10,7 @@
  */
 
 let landmarkerPromise: Promise<any> | null = null;
+registerModel(["/webcam"], () => { const p = landmarkerPromise; landmarkerPromise = null; return p; });
 
 export interface FaceResult {
   /** normalized 0..1 landmark points [{x,y,z}], or null when no face this frame */

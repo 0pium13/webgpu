@@ -17,6 +17,7 @@
 
 import { loadOrt, createSession } from "@/lib/ortRuntime";
 import { uiYield } from "@/lib/bgYield";
+import { registerModel } from "@/lib/modelRegistry";
 
 const MODEL_URL = "https://huggingface.co/bukuroo/RealESRGAN-ONNX/resolve/main/real-esrgan-x4plus-128.onnx";
 const IN = 128;        // fixed model input
@@ -44,6 +45,7 @@ export interface FrameCache {
 }
 
 let sessionPromise: Promise<{ ort: any; session: any; inName: string; outName: string }> | null = null;
+registerModel(["/upscale"], () => { const p = sessionPromise; sessionPromise = null; return p; });
 let usedDevice: "webgpu" | "wasm" = "webgpu";
 
 export function srDevice() {

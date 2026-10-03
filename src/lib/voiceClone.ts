@@ -16,7 +16,8 @@
 import { loadOrt, createSession } from "./ortRuntime";
 import { loadWhisper } from "./whisper";
 import { alignWords } from "./forcedAlign";
-import { ortDevice } from "./gpuBackend";
+import { tjsDevice } from "./gpuBackend";
+import { registerModel } from "@/lib/modelRegistry";
 
 const ENCODER_URL = "/models/wavtok_encoder.onnx";
 const CODE_RATE = 75; // tokens per second
@@ -54,6 +55,7 @@ async function decodeMono(file: File, sampleRate: number): Promise<Float32Array>
 }
 
 let encoderPromise: Promise<any> | null = null;
+registerModel(["/voice"], () => { const p = encoderPromise; encoderPromise = null; return p; });
 function getEncoder(onPct: (p: number) => void) {
   if (encoderPromise) return encoderPromise;
   encoderPromise = (async () => {
@@ -208,6 +210,7 @@ function buildPrompt(speaker: ClonedSpeaker, text: string) {
 }
 
 let genPromise: Promise<any> | null = null;
+registerModel(["/voice"], () => { const p = genPromise; genPromise = null; return p; });
 function getGenerator(onPct: (p: number) => void) {
   if (genPromise) return genPromise;
   genPromise = (async () => {
@@ -219,7 +222,7 @@ function getGenerator(onPct: (p: number) => void) {
     };
     const tokenizer = await AutoTokenizer.from_pretrained(LLM_ID);
     let lm;
-    const want = await ortDevice(); // Safari/WebKit → wasm (ORT webgpu broken there)
+    const want = await tjsDevice(); // Safari <26 / unknown WebKit → wasm
     try {
       // q4 (fp32 accumulation), not q4f16 — the f16 variant generated
       // well-formed but near-silent audio codes on WebGPU

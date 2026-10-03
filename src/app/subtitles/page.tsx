@@ -7,10 +7,11 @@ import { useGPU } from "@/lib/useGPU";
 import { CaptionsIcon, SparkleIcon } from "@/components/Icons";
 import { titleProgress, titleDone } from "@/lib/bgYield";
 import {
-  decodeAudio, transcribe, whisperDevice, toSRT, toVTT, toTXT,
-  WHISPER_MODELS, LANGUAGES,
+  decodeAudio, toSRT, toVTT, toTXT,
+  WHISPER_MODELS, HINGLISH_MODEL, LANGUAGES,
   type SubtitleLine, type WhisperPhase, type WhisperTier,
 } from "@/lib/whisper";
+import { transcribe, whisperDevice } from "@/lib/whisperClient";
 
 const TIER_HINTS: Record<WhisperTier, string> = {
   fast: "Great for English",
@@ -96,6 +97,16 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
   const [tier, setTier] = useState<WhisperTier>("fast");
   const [language, setLanguage] = useState("auto");
   const [output, setOutput] = useState<OutputStyle>("hinglish");
+  // Hinglish on the Fast tier runs the Oriserve specialist instead of plain
+  // whisper-base — native romanized output, trained on Indian audio.
+  // Hinglish mode drops the Accurate tier: whisper-small drifts into English
+  // TRANSLATION on Hindi speech (verified), so it never produced Hinglish.
+  const hinglishMode = output === "hinglish" && (language === "auto" || language === "hindi");
+  const specialistFor = (t: WhisperTier) => hinglishMode && t !== "max";
+  const tierChoices = (Object.keys(WHISPER_MODELS) as WhisperTier[]).filter(
+    (t) => !(hinglishMode && t === "accurate")
+  );
+  const activeModel = specialistFor(tier) ? HINGLISH_MODEL : WHISPER_MODELS[tier];
   const [downloading, setDownloading] = useState(false);
   const linesBox = useRef<HTMLDivElement>(null);
 
@@ -127,6 +138,7 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
         tier, language,
         translate: output === "english",
         romanize: output === "hinglish",
+        hinglishSpecialist: specialistFor(tier),
       });
       setLines(finalLines);
       setPct(100);
@@ -167,10 +179,10 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
             {/* model tier — bigger model = dramatically better Indic accuracy */}
             <div style={{ width: "100%", maxWidth: 520 }}>
               <p className="mono" style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: 8 }}>Model</p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                {(Object.keys(WHISPER_MODELS) as WhisperTier[]).map((t) => {
-                  const m = WHISPER_MODELS[t];
-                  const active = tier === t;
+              <div style={{ display: "grid", gridTemplateColumns: `repeat(${tierChoices.length}, 1fr)`, gap: 8 }}>
+                {tierChoices.map((t) => {
+                  const m = specialistFor(t) ? HINGLISH_MODEL : WHISPER_MODELS[t];
+                  const active = tier === t || (hinglishMode && t === "fast" && tier === "accurate");
                   return (
                     <button key={t} onClick={() => setTier(t)} style={{
                       background: active ? "var(--accent-dim)" : "var(--surface-2)",
@@ -180,7 +192,7 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
                       <span style={{ display: "block", fontSize: 13, fontWeight: 500, color: active ? "var(--accent)" : "var(--text)" }}>
                         {m.label} <span className="mono" style={{ fontSize: 10.5, color: "var(--text-dim)", fontWeight: 400 }}>{m.size}</span>
                       </span>
-                      <span style={{ display: "block", fontSize: 11, color: "var(--text-muted)", marginTop: 3, lineHeight: 1.35 }}>{TIER_HINTS[t]}</span>
+                      <span style={{ display: "block", fontSize: 11, color: "var(--text-muted)", marginTop: 3, lineHeight: 1.35 }}>{specialistFor(t) ? "Trained on Indian audio — writes Hinglish natively" : TIER_HINTS[t]}</span>
                     </button>
                   );
                 })}
@@ -240,7 +252,7 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
               <SparkleIcon size={17} /> Transcribe
             </button>
             <p className="mono" style={{ fontSize: 12, color: "var(--text-muted)", marginTop: -8 }}>
-              Whisper {WHISPER_MODELS[tier].label} · lines stream in live · runs on your GPU
+              Whisper {activeModel.label} · lines stream in live · runs on your GPU
             </p>
           </div>
         )}
@@ -257,8 +269,8 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
               downloading ? (
                 <ModelLoader
                   pct={pct}
-                  title={`Whisper ${WHISPER_MODELS[tier].label} is waking up`}
-                  sub={`${WHISPER_MODELS[tier].size} · downloads once, cached forever`}
+                  title={`Whisper ${activeModel.label} is waking up`}
+                  sub={`${activeModel.size} · downloads once, cached forever`}
                 />
               ) : (
                 <p style={{ fontSize: 13, color: "var(--text-muted)", padding: "40px 0", textAlign: "center" }}>{msg}</p>

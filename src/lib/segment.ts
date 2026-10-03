@@ -1,3 +1,4 @@
+import { registerModel } from "@/lib/modelRegistry";
 "use client";
 
 /**
@@ -10,6 +11,7 @@
  */
 
 let segmenterPromise: Promise<any> | null = null;
+registerModel(["/webcam"], () => { const p = segmenterPromise; segmenterPromise = null; return p; });
 
 export async function loadSegmenter(onProgress?: (msg: string) => void) {
   if (segmenterPromise) return segmenterPromise;

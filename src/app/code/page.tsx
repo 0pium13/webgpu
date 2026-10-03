@@ -18,6 +18,7 @@ import Nav from "@/components/Nav";
 import ModelLoader from "@/components/ModelLoader";
 import { CodeIcon } from "@/components/Icons";
 import { fetchFreeModels, streamChat, extractHtml, type ORModel, type ChatMsg } from "@/lib/openrouter";
+import { keepModelsCached } from "@/lib/storage";
 
 const LOCAL_MODELS = [
   {
@@ -81,6 +82,13 @@ export default function CodePage() {
   const [hasResult, setHasResult] = useState(false);
 
   const engineRef = useRef<any>(null);
+  // Leaving the page (client-side nav keeps modules alive): unload the
+  // 1–4GB WebLLM model so the next tool starts with free VRAM.
+  useEffect(() => () => {
+    const engine = engineRef.current;
+    engineRef.current = null;
+    engine?.unload?.().catch?.(() => {});
+  }, []);
   const historyRef = useRef<ChatMsg[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const stopRef = useRef(false);
@@ -107,6 +115,7 @@ export default function CodePage() {
     try { await engineRef.current?.unload?.(); } catch { /* old engine */ }
     engineRef.current = null;
     const webllm = await import("@mlc-ai/web-llm");
+    void keepModelsCached();
     engineRef.current = await webllm.CreateMLCEngine(localModel, {
       initProgressCallback: (p: { text: string; progress?: number }) => {
         setLoadMsg(p.text);

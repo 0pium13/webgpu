@@ -17,6 +17,7 @@ import ModelLoader from "@/components/ModelLoader";
 import CloneStudio from "@/components/voice/CloneStudio";
 import { useGPU } from "@/lib/useGPU";
 import { SparkleIcon, VoiceIcon } from "@/components/Icons";
+import { registerModel } from "@/lib/modelRegistry";
 
 // Kokoro's v1.0 ONNX release ships English only — these ids are the ones the
 // engine actually has. (The Hindi/multilingual voices exist upstream but have
@@ -72,6 +73,7 @@ function chunkText(text: string, max = 350): string[] {
 }
 
 let ttsPromise: Promise<any> | null = null;
+registerModel(["/voice"], () => { const p = ttsPromise; ttsPromise = null; return p; });
 
 function loadTTS(onPct: (p: number) => void): Promise<any> {
   if (ttsPromise) return ttsPromise;

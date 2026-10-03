@@ -3,9 +3,62 @@
 import { useState } from "react";
 import type { ImgFile } from "@/app/bg-remove/page";
 import { BgRemoveIcon } from "@/components/Icons";
-import { ortDevice } from "@/lib/gpuBackend";
+import { tjsDevice } from "@/lib/gpuBackend";
+import { registerModel } from "@/lib/modelRegistry";
 
 type Phase = "idle" | "loading-model" | "processing" | "done" | "error";
+
+/**
+ * RMBG-1.4 model + processor, loaded once per visit and reused across images
+ * (it used to reload on every click and never free the old session).
+ * Released by the model registry when the user leaves /bg-remove.
+ */
+let rmbgPromise: Promise<{ model: any; processor: any }> | null = null;
+registerModel(["/bg-remove"], () => { const p = rmbgPromise; rmbgPromise = null; return p; });
+
+function loadRmbg(progress: (p: any) => void, onFallback: () => void) {
+  if (rmbgPromise) return rmbgPromise;
+  rmbgPromise = (async () => {
+    const { AutoModel, AutoProcessor, env } = await import("@huggingface/transformers");
+    env.allowLocalModels = false;
+    // WebGPU on Chromium + Safari 26+; older WebKit → wasm (fp32: wasm can't
+    // run 4-bit, and a quantized default throws "Missing required scale").
+    const dev = await tjsDevice();
+    let model: any;
+    try {
+      model = await AutoModel.from_pretrained("briaai/RMBG-1.4", {
+        config: { model_type: "custom" } as any,
+        device: dev,
+        dtype: dev === "wasm" ? "fp32" : undefined,
+        progress_callback: progress,
+      });
+    } catch {
+      onFallback();
+      model = await AutoModel.from_pretrained("briaai/RMBG-1.4", {
+        config: { model_type: "custom" } as any,
+        device: "wasm",
+        dtype: "fp32",
+        progress_callback: progress,
+      });
+    }
+    const processor = await AutoProcessor.from_pretrained("briaai/RMBG-1.4", {
+      config: {
+        do_normalize: true,
+        do_pad: false,
+        do_rescale: true,
+        do_resize: true,
+        image_mean: [0.5, 0.5, 0.5],
+        image_std: [1, 1, 1],
+        resample: 2,
+        rescale_factor: 0.00392156862745098,
+        size: { width: 1024, height: 1024 },
+      } as any,
+    });
+    return { model, processor };
+  })();
+  rmbgPromise.catch(() => { rmbgPromise = null; });
+  return rmbgPromise;
+}
 
 const CHECKER =
   "repeating-conic-gradient(#2a2a2e 0% 25%, #18181b 0% 50%) 50% / 20px 20px";
@@ -35,9 +88,6 @@ export default function BgRemoveProcessor({
       setPhase("loading-model");
       setMsg("Loading AI model…");
 
-      const { AutoModel, AutoProcessor, RawImage, env } = await import("@huggingface/transformers");
-      env.allowLocalModels = false;
-
       const progress = (p: any) => {
         if (p.status === "progress" && p.total) {
           setDlPct(Math.round((p.loaded / p.total) * 100));
@@ -45,43 +95,8 @@ export default function BgRemoveProcessor({
         }
       };
 
-      // useWebGPU (from raw navigator.gpu) is true on Safari, but ORT's webgpu
-      // dies at inference there — ortDevice() gates on the reliable case only.
-      const dev = await ortDevice();
-      let model: any;
-      try {
-        model = await AutoModel.from_pretrained("briaai/RMBG-1.4", {
-          config: { model_type: "custom" } as any,
-          device: dev,
-          // wasm/CPU can't run 4-bit — pin fp32 there so session creation
-          // doesn't throw "Missing required scale" on a quantized default.
-          dtype: dev === "wasm" ? "fp32" : undefined,
-          progress_callback: progress,
-        });
-      } catch (e) {
-        // webgpu can fail on some ops — fall back to wasm
-        setMsg("Falling back to CPU…");
-        model = await AutoModel.from_pretrained("briaai/RMBG-1.4", {
-          config: { model_type: "custom" } as any,
-          device: "wasm",
-          dtype: "fp32",
-          progress_callback: progress,
-        });
-      }
-
-      const processor = await AutoProcessor.from_pretrained("briaai/RMBG-1.4", {
-        config: {
-          do_normalize: true,
-          do_pad: false,
-          do_rescale: true,
-          do_resize: true,
-          image_mean: [0.5, 0.5, 0.5],
-          image_std: [1, 1, 1],
-          resample: 2,
-          rescale_factor: 0.00392156862745098,
-          size: { width: 1024, height: 1024 },
-        } as any,
-      });
+      const { RawImage } = await import("@huggingface/transformers");
+      const { model, processor } = await loadRmbg(progress, () => setMsg("Falling back to CPU…"));
 
       setPhase("processing");
       setMsg("Removing background…");

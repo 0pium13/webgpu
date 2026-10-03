@@ -14,6 +14,7 @@
  */
 
 import { loadOrt, createSession } from "@/lib/ortRuntime";
+import { registerModel } from "@/lib/modelRegistry";
 
 const MODEL_URL = "https://huggingface.co/Meeperomi/GFPGANv1.4-onnx/resolve/main/GFPGANv1.4.onnx";
 const SIZE = 512;
@@ -35,7 +36,9 @@ export type RestoreProgress =
   | { phase: "paste" };
 
 let sessionPromise: Promise<{ ort: any; session: any; inName: string; outName: string }> | null = null;
+registerModel(["/upscale"], () => { const p = sessionPromise; sessionPromise = null; return p; });
 let detectorPromise: Promise<any> | null = null;
+registerModel(["/upscale"], () => { const p = detectorPromise; detectorPromise = null; return p; });
 
 async function loadGfpgan(onProgress?: (p: RestoreProgress) => void) {
   if (sessionPromise) return sessionPromise;

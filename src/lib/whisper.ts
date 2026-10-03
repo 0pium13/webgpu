@@ -24,6 +24,26 @@ export const WHISPER_MODELS = {
 };
 export type WhisperTier = keyof typeof WHISPER_MODELS;
 
+/**
+ * Hinglish specialist: Oriserve's Whisper-Hindi2Hinglish-Swift (whisper-base
+ * fine-tuned on ~550h of noisy Indian audio) writes romanized Hinglish
+ * NATIVELY — "aaj main aapko" — instead of Devanagari we'd have to
+ * transliterate. q8 ONNX (~100MB), Apache-2.0. q8 is wasm-safe, so Safari's
+ * CPU path can run it too (unlike 4-bit). Used for Hinglish output on the
+ * Fast tier; Accurate/Max keep the big models + transliteration.
+ */
+export const HINGLISH_MODEL = {
+  id: "Hirecentive-D3l/Whisper-Hindi2Hinglish-Swift-ONNX",
+  label: "Hinglish specialist",
+  size: "~100MB",
+  dtype: "q8" as const,
+};
+type ModelKey = WhisperTier | "hinglish";
+
+function modelFor(key: ModelKey): { id: string; dtype: "fp32" | "fp16" | "q8" } {
+  return key === "hinglish" ? HINGLISH_MODEL : WHISPER_MODELS[key];
+}
+
 /** Languages Whisper genuinely supports, South Asia first. */
 export const LANGUAGES: { code: string; label: string }[] = [
   { code: "auto", label: "Auto-detect" },
@@ -57,7 +77,8 @@ export const LANGUAGES: { code: string; label: string }[] = [
 ];
 
 import { toHinglish } from "./hinglish";
-import { ortDevice } from "./gpuBackend";
+import { tjsDevice } from "./gpuBackend";
+import { registerModel } from "@/lib/modelRegistry";
 
 const SAMPLE_RATE = 16000;
 const WINDOW_S = 28;
@@ -74,14 +95,19 @@ export type WhisperPhase =
   | { step: "decode" }
   | { step: "transcribe"; doneSec: number; totalSec: number; lines: SubtitleLine[] };
 
-const asrCache = new Map<WhisperTier, Promise<any>>();
+const asrCache = new Map<ModelKey, Promise<any>>();
+registerModel(["/subtitles", "/voice"], () => {
+  const all = [...asrCache.values()];
+  asrCache.clear();
+  return all.length ? Promise.all(all) : null;
+});
 let usedDevice: "webgpu" | "wasm" = "webgpu";
 
 export function whisperDevice() {
   return usedDevice;
 }
 
-export async function loadWhisper(tier: WhisperTier = "fast", onProgress?: (p: WhisperPhase) => void) {
+export async function loadWhisper(tier: ModelKey = "fast", onProgress?: (p: WhisperPhase) => void) {
   const cached = asrCache.get(tier);
   if (cached) return cached;
   // switching tiers: release the old pipeline's GPU/wasm memory — large-v3-turbo
@@ -90,7 +116,7 @@ export async function loadWhisper(tier: WhisperTier = "fast", onProgress?: (p: W
     asrCache.delete(t);
     p.then((asr) => asr?.dispose?.()).catch(() => {});
   }
-  const { id, dtype } = WHISPER_MODELS[tier];
+  const { id, dtype } = modelFor(tier);
   const promise = (async () => {
     const tj: any = await import("@huggingface/transformers");
     const { pipeline, env } = tj;
@@ -100,10 +126,9 @@ export async function loadWhisper(tier: WhisperTier = "fast", onProgress?: (p: W
         onProgress?.({ step: "download", pct: Math.round((p.loaded / p.total) * 100) });
       }
     };
-    // Only ask for webgpu where ORT's JSEP webgpu actually runs (Chromium).
-    // On Safari/WebKit it "loads" then dies at inference with
-    // "webgpuInit is not a function" → we go straight to wasm instead.
-    const want = await ortDevice();
+    // WebGPU on Chromium and Safari 26+ (transformers.js 4.3 runtime);
+    // older/unknown WebKit goes straight to wasm.
+    const want = await tjsDevice();
     // wasm/CPU can't run 4-bit (MatMulNBits) — that's WebGPU-only. Force a
     // wasm-safe precision (fp32; fp16 isn't a wasm dtype either) or ORT throws
     // "Missing required scale … DequantizeLinear" at session creation.
@@ -156,6 +181,28 @@ export interface TranscribeOptions {
    *  we romanize Devanagari to chat-style Latin. Latin text passes through,
    *  so it's safe to leave on for English / code-switched audio. */
   romanize?: boolean;
+  /** true = use the Hinglish specialist model (native romanized output).
+   *  Overrides tier; ignores translate. */
+  hinglishSpecialist?: boolean;
+}
+
+/**
+ * When a window comes back without usable timestamps (the Hinglish
+ * fine-tune was trained without them), split its text into sentences and
+ * pace them across the window by length — readers track roughly by
+ * character count, so proportional timing lands close to the speech.
+ */
+function paceUntimed(text: string, windowSec: number): { timestamp: [number, number]; text: string }[] {
+  const parts = text.split(/(?<=[.?!।|])\s+/).map((t) => t.trim()).filter(Boolean);
+  const sentences = parts.length ? parts : [text.trim()];
+  const total = sentences.reduce((n, t) => n + t.length, 0) || 1;
+  let t0 = 0;
+  return sentences.map((t) => {
+    const dur = (t.length / total) * windowSec;
+    const chunk = { timestamp: [t0, t0 + dur] as [number, number], text: t };
+    t0 += dur;
+    return chunk;
+  });
 }
 
 /** Transcribe with live per-window streaming. Returns the final line list. */
@@ -164,10 +211,17 @@ export async function transcribe(
   onProgress: (p: WhisperPhase) => void,
   opts: TranscribeOptions = {}
 ): Promise<SubtitleLine[]> {
-  const asr = await loadWhisper(opts.tier ?? "fast", onProgress);
+  const specialist = !!opts.hinglishSpecialist;
+  const asr = await loadWhisper(specialist ? "hinglish" : (opts.tier ?? "fast"), onProgress);
   const genOpts: any = { return_timestamps: true };
-  if (opts.language && opts.language !== "auto") genOpts.language = opts.language;
-  if (opts.translate) genOpts.task = "translate";
+  if (specialist) {
+    // the fine-tune expects Hindi in / transcribe; it emits Latin itself
+    genOpts.language = "hindi";
+    genOpts.task = "transcribe";
+  } else {
+    if (opts.language && opts.language !== "auto") genOpts.language = opts.language;
+    if (opts.translate) genOpts.task = "translate";
+  }
   const totalSec = audio.length / SAMPLE_RATE;
   const lines: SubtitleLine[] = [];
 
@@ -179,7 +233,12 @@ export async function transcribe(
     const offsetSec = start / SAMPLE_RATE;
 
     const out = await asr(chunk, genOpts);
-    const rawChunks: any[] = out?.chunks ?? [];
+    let rawChunks: any[] = out?.chunks ?? [];
+    const timed = rawChunks.filter((c) => Array.isArray(c.timestamp) && c.timestamp[1] != null);
+    const fullText = String(out?.text ?? "").trim();
+    if (fullText && (timed.length === 0 || (rawChunks.length <= 1 && fullText.length > 80))) {
+      rawChunks = paceUntimed(fullText, chunk.length / SAMPLE_RATE);
+    }
 
     for (const c of rawChunks) {
       const [s, e] = c.timestamp ?? [0, null];
