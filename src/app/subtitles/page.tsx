@@ -12,6 +12,8 @@ import {
   type SubtitleLine, type WhisperPhase, type WhisperTier,
 } from "@/lib/whisper";
 import { transcribe, whisperDevice } from "@/lib/whisperClient";
+import { translateSubtitles } from "@/lib/indictransClient";
+import { TRANSLATE_TARGETS } from "@/lib/indictrans";
 
 const TIER_HINTS: Record<WhisperTier, string> = {
   fast: "Great for English",
@@ -94,6 +96,11 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
   const [pct, setPct] = useState(0);
   const [lines, setLines] = useState<SubtitleLine[]>([]);
   const [errMsg, setErrMsg] = useState("");
+  // English → Indian-language translation of finished captions (IndicTrans2)
+  const [tLang, setTLang] = useState("hi");
+  const [tPhase, setTPhase] = useState<"idle" | "working" | "done" | "error">("idle");
+  const [tMsg, setTMsg] = useState("");
+  const [tLines, setTLines] = useState<SubtitleLine[]>([]);
   const [tier, setTier] = useState<WhisperTier>("fast");
   const [language, setLanguage] = useState("auto");
   const [output, setOutput] = useState<OutputStyle>("hinglish");
@@ -157,6 +164,29 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
     a.href = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
     a.download = `${input.file.name.replace(/\.[^.]+$/, "")}.${ext}`;
     a.click();
+  }
+
+  async function translate() {
+    setTPhase("working");
+    setTLines([]);
+    setTMsg("Preparing translator…");
+    try {
+      const out = await translateSubtitles(lines.map((l) => l.text), tLang, (p) => {
+        if (p.step === "download") setTMsg(`Downloading translator (~280MB, once)… ${p.pct}%`);
+        else {
+          setTMsg(`Translating line ${p.done} / ${p.total}`);
+          titleProgress("Translating", (p.done / p.total) * 100);
+        }
+      });
+      setTLines(lines.map((l, i) => ({ ...l, text: out[i] || l.text })));
+      setTPhase("done");
+      titleDone("Translation ready");
+    } catch (e: any) {
+      console.error(e);
+      setTMsg(e?.message ?? "Translation failed");
+      setTPhase("error");
+      titleProgress(null);
+    }
   }
 
   const busy = phase === "working";
@@ -304,6 +334,52 @@ function SubtitleStudio({ input, onReset }: { input: MediaFile; onReset: () => v
           <button onClick={() => save(toTXT(lines), "txt")} style={secondary}>↓ TXT <span style={sub}>· plain transcript</span></button>
         </div>
       )}
+
+      {phase === "done" && lines.length > 0 && (
+        <div style={{ marginTop: 18, background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 14, padding: "18px 18px 16px" }}>
+          <p className="mono" style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--accent)", margin: 0 }}>Translate captions</p>
+          {output !== "english" ? (
+            <p style={{ fontSize: 13.5, color: "var(--text-muted)", margin: "8px 0 0", lineHeight: 1.55 }}>
+              Translation works from English captions. Pick <strong style={{ color: "var(--text)" }}>English</strong> output above and transcribe again — it works for Hindi or any other speech too.
+            </p>
+          ) : (
+            <>
+              <p style={{ fontSize: 13.5, color: "var(--text-muted)", margin: "8px 0 14px", lineHeight: 1.55 }}>
+                Turn these captions into any of 12 Indian languages, on your device. Timing is kept line for line.
+              </p>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                <select value={tLang} onChange={(e) => { setTLang(e.target.value); setTPhase("idle"); }} disabled={tPhase === "working"} style={{
+                  background: "var(--surface-2)", color: "var(--text)", border: "0.5px solid var(--border)", borderRadius: 10,
+                  padding: "10px 12px", fontSize: 14, fontFamily: "inherit",
+                }}>
+                  {TRANSLATE_TARGETS.map((t) => <option key={t.code} value={t.code}>{t.label}</option>)}
+                </select>
+                <button onClick={translate} disabled={tPhase === "working"} style={{ ...primary, opacity: tPhase === "working" ? 0.6 : 1 }}>
+                  {tPhase === "working" ? "Translating…" : "Translate"}
+                </button>
+              </div>
+              {tPhase === "working" && <p className="mono" style={{ fontSize: 12, color: "var(--text-muted)", margin: "12px 0 0" }}>{tMsg}</p>}
+              {tPhase === "error" && <p style={{ fontSize: 13, color: "#ef4444", margin: "12px 0 0" }}>{tMsg}</p>}
+              {tPhase === "done" && tLines.length > 0 && (
+                <>
+                  <div style={{ marginTop: 14, maxHeight: 200, overflowY: "auto", display: "grid", gap: 8 }}>
+                    {tLines.slice(0, 40).map((l, i) => (
+                      <p key={i} style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: "var(--text)" }}>
+                        <span className="mono" style={{ fontSize: 11, color: "var(--text-dim)", marginRight: 8 }}>{Math.floor(l.start / 60)}:{String(Math.floor(l.start % 60)).padStart(2, "0")}</span>
+                        {l.text}
+                      </p>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+                    <button onClick={() => save(toSRT(tLines), `${tLang}.srt`)} style={primary}>↓ {tLang.toUpperCase()} SRT</button>
+                    <button onClick={() => save(toVTT(tLines), `${tLang}.vtt`)} style={secondary}>↓ {tLang.toUpperCase()} VTT</button>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -343,4 +419,5 @@ const secondary: React.CSSProperties = {
   background: "var(--surface-2)", color: "var(--text)", border: "0.5px solid var(--border)",
   borderRadius: 10, padding: "11px 18px", fontSize: 14, fontWeight: 500, cursor: "pointer",
 };
-const sub: React.CSSProperties = { fontSize: 11, color: "rgba(255,255,255,0.55)", fontWeight: 400 };
+// inherits the button's text colour (dark on gold, light on surface)
+const sub: React.CSSProperties = { fontSize: 11, opacity: 0.6, fontWeight: 400 };

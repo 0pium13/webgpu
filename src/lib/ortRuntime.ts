@@ -65,7 +65,7 @@ async function evictModel(url: string): Promise<void> {
   try { const c = await caches.open(MODEL_CACHE); await c.delete(url); } catch { /* nothing to evict */ }
 }
 
-async function fetchModelBytes(
+export async function fetchModelBytes(
   url: string,
   onProgress: ((loadedBytes: number, totalBytes: number) => void) | undefined,
   skipCache: boolean
