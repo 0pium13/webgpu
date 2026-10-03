@@ -14,7 +14,34 @@ import ModelLoader from "@/components/ModelLoader";
 import { ChatIcon, SparkleIcon } from "@/components/Icons";
 import { keepModelsCached } from "@/lib/storage";
 
-const MODELS = [
+/**
+ * Unfiltered mode: huihui-ai's abliterated Qwen3.5-4B (refusal behaviour
+ * removed), q4f16_1 MLC weights. The weights repo is data only (76 tensor
+ * shards + JSON, verified); the executable model library is WebLLM's
+ * official Qwen3.5-4B build from mlc-ai — same architecture + quantization.
+ * Only selectable after explicit 18+ / responsibility consent.
+ */
+const UNFILTERED_ID = "Huihui-Qwen3.5-4B-abliterated-q4f16_1-MLC";
+const UNFILTERED_RECORD = {
+  model: "https://huggingface.co/kamekichi1231/Huihui-Qwen3.5-4B-abliterated-q4f16_1-MLC",
+  model_id: UNFILTERED_ID,
+  model_lib:
+    "https://raw.githubusercontent.com/mlc-ai/binary-mlc-llm-libs/main/web-llm-models/v0_2_84/base/Qwen3.5-4B-q4f16_1_cs1k-webgpu.wasm",
+  vram_required_MB: 3867.82,
+  low_resource_required: false,
+  overrides: { context_window_size: 4096 },
+};
+const CONSENT_KEY = "webgpu.in:unfiltered-consent-v1";
+const BACKEND_KEY = "webgpu.in:webllm-cache-backend";
+
+function hasConsent(): boolean {
+  try { return !!localStorage.getItem(CONSENT_KEY); } catch { return false; }
+}
+function saveConsent() {
+  try { localStorage.setItem(CONSENT_KEY, new Date().toISOString()); } catch { /* private mode: asked again next visit */ }
+}
+
+const MODELS: { id: string; label: string; size: string; vram: string; hint: string; unfiltered?: boolean }[] = [
   {
     id: "Llama-3.2-1B-Instruct-q4f16_1-MLC",
     label: "Llama 3.2 1B", size: "~700MB", vram: "1GB VRAM",
@@ -29,6 +56,12 @@ const MODELS = [
     id: "Llama-3.2-3B-Instruct-q4f16_1-MLC",
     label: "Llama 3.2 3B", size: "~1.7GB", vram: "2.3GB VRAM",
     hint: "Smartest — needs a real GPU",
+  },
+  {
+    id: UNFILTERED_ID,
+    label: "Unfiltered 4B", size: "~2.3GB", vram: "3.9GB VRAM",
+    hint: "No refusals · 18+ · opt-in",
+    unfiltered: true,
   },
 ];
 
@@ -48,6 +81,7 @@ export default function ChatPage() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [draft, setDraft] = useState("");
   const [tokSec, setTokSec] = useState(0);
+  const [consentOpen, setConsentOpen] = useState(false);
   const engineRef = useRef<any>(null);
   // Leaving the page (client-side nav keeps modules alive): unload the
   // 1–4GB WebLLM model so the next tool starts with free VRAM.
@@ -69,16 +103,61 @@ export default function ChatPage() {
       setLoadMsg("Preparing…");
       const webllm = await import("@mlc-ai/web-llm");
       void keepModelsCached();
-      engineRef.current = await webllm.CreateMLCEngine(modelId, {
-        initProgressCallback: (p: { text: string; progress?: number }) => {
-          setLoadMsg(p.text);
-          setLoadPct(typeof p.progress === "number" && p.progress > 0 ? Math.round(p.progress * 100) : -1);
-        },
-      });
+      // fail fast with a clear message instead of a cryptic Cache.add error
+      // halfway through a multi-GB download
+      // Compare against total capacity, not free space: a resumed download's
+      // already-saved shards count as "used", and a genuinely full disk is
+      // still caught by the storage-error handling below.
+      const need = parseFloat(model.size.replace(/[^\d.]/g, "")) * (/GB/.test(model.size) ? 1e9 : 1e6);
+      const quota = await navigator.storage?.estimate?.().then((e) => e.quota ?? 0).catch(() => 0);
+      if (quota && quota < need * 1.1) {
+        throw new Error(
+          `This browser can store at most ${Math.round(quota / 1048576)}MB, and ${model.label} needs ${model.size}. ` +
+            `Free up disk space (browsers size their storage from free disk), or pick a smaller model.`
+        );
+      }
+      const create = (cacheBackend: "cache" | "indexeddb") =>
+        webllm.CreateMLCEngine(modelId, {
+          appConfig: {
+            ...webllm.prebuiltAppConfig,
+            cacheBackend,
+            model_list: [...webllm.prebuiltAppConfig.model_list, UNFILTERED_RECORD as any],
+          },
+          initProgressCallback: (p: { text: string; progress?: number }) => {
+            setLoadMsg(p.text);
+            setLoadPct(typeof p.progress === "number" && p.progress > 0 ? Math.round(p.progress * 100) : -1);
+          },
+        });
+      let preferIdb = false;
+      try { preferIdb = localStorage.getItem(BACKEND_KEY) === "indexeddb"; } catch { /* no storage access */ }
+      if (preferIdb) {
+        engineRef.current = await create("indexeddb");
+      } else {
+        try {
+          engineRef.current = await create("cache");
+        } catch (e: any) {
+          // Some Chromium builds throw "Unexpected internal error" from Cache
+          // Storage on large shards even with quota to spare — IndexedDB copes.
+          // Remember it, so retries resume the shards already in IndexedDB.
+          if (!/on 'Cache'/.test(String(e?.message))) throw e;
+          console.warn("[chat] Cache Storage failed, retrying with IndexedDB", e);
+          try { localStorage.setItem(BACKEND_KEY, "indexeddb"); } catch { /* ignore */ }
+          // drop the half-written Cache Storage copy so it doesn't eat the
+          // quota the IndexedDB copy now needs
+          try { await caches.delete("webllm/model"); } catch { /* ignore */ }
+          setLoadMsg("Retrying with a different browser storage…");
+          engineRef.current = await create("indexeddb");
+        }
+      }
       setPhase("ready");
     } catch (e: any) {
       console.error(e);
-      setErrMsg(e?.message ?? "Failed to load the model");
+      const msg = String(e?.message ?? "Failed to load the model");
+      setErrMsg(
+        /on 'Cache'|QuotaExceeded|quota/i.test(msg)
+          ? `Your browser ran out of storage while saving ${model.label}. Free up disk space (or clear this site's data) and try again, or pick a smaller model.`
+          : msg
+      );
       setPhase("error");
     }
   }
@@ -163,7 +242,7 @@ export default function ChatPage() {
               {MODELS.map((m) => {
                 const active = modelId === m.id;
                 return (
-                  <button key={m.id} onClick={() => setModelId(m.id)} style={{
+                  <button key={m.id} onClick={() => (m.unfiltered && !hasConsent() ? setConsentOpen(true) : setModelId(m.id))} style={{
                     textAlign: "left", background: active ? "var(--accent-dim)" : "var(--surface-2)",
                     border: active ? "0.5px solid var(--accent)" : "0.5px solid var(--border)",
                     borderRadius: 12, padding: "14px 16px", cursor: "pointer",
@@ -201,6 +280,12 @@ export default function ChatPage() {
 
         {(phase === "ready" || phase === "generating" || (phase === "error" && msgs.length > 0)) && (
           <div style={{ display: "flex", flexDirection: "column", background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 16, overflow: "hidden" }}>
+            {model.unfiltered && (
+              <p style={{ margin: 0, padding: "9px 16px", fontSize: 12, lineHeight: 1.5, color: "var(--amber)", background: "var(--amber-dim)", borderBottom: "0.5px solid var(--border)" }}>
+                Unfiltered model · 18+ · outputs are unmoderated and may be false, offensive or harmful.
+                You are solely responsible for how you use them. <a href="/terms" style={{ color: "inherit" }}>Terms</a>
+              </p>
+            )}
             <div ref={scrollRef} style={{ height: "48vh", overflowY: "auto", padding: "20px 22px", display: "flex", flexDirection: "column", gap: 14 }}>
               {msgs.length === 0 && (
                 <div style={{ margin: "auto", textAlign: "center", color: "var(--text-dim)" }}>
@@ -260,6 +345,13 @@ export default function ChatPage() {
           </div>
         )}
 
+        {consentOpen && (
+          <UnfilteredConsent
+            onCancel={() => setConsentOpen(false)}
+            onAccept={() => { saveConsent(); setConsentOpen(false); setModelId(UNFILTERED_ID); }}
+          />
+        )}
+
         {phase === "error" && (
           <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 12 }}>
             <p style={{ color: "#ef4444", fontSize: 13, flex: 1 }}>{errMsg}</p>
@@ -267,6 +359,50 @@ export default function ChatPage() {
             <button onClick={switchModel} style={{ ...btn, background: "var(--surface-2)", color: "var(--text)" }}>Pick another model</button>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 18+ / responsibility gate for the unfiltered model. Both boxes must be
+ * ticked; acceptance is remembered per device (localStorage).
+ */
+function UnfilteredConsent({ onAccept, onCancel }: { onAccept: () => void; onCancel: () => void }) {
+  const [adult, setAdult] = useState(false);
+  const [terms, setTerms] = useState(false);
+  const ok = adult && terms;
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="unfiltered-title"
+      style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+    >
+      <div style={{ width: "100%", maxWidth: 520, maxHeight: "90vh", overflowY: "auto", background: "var(--surface)", border: "0.5px solid var(--border-strong)", borderRadius: 16, padding: "26px 24px" }}>
+        <span className="mono" style={{ fontSize: 11, letterSpacing: "0.15em", color: "var(--amber)", textTransform: "uppercase" }}>18+ only</span>
+        <h2 id="unfiltered-title" style={{ fontSize: 22, fontWeight: 600, margin: "8px 0 12px" }}>Unfiltered mode</h2>
+        <ul style={{ margin: 0, paddingLeft: 18, display: "grid", gap: 8, fontSize: 13.5, lineHeight: 1.6, color: "var(--text-secondary)" }}>
+          <li>This model has had its safety refusals removed. It may produce content that is explicit, offensive, dangerous, illegal where you live, or simply false.</li>
+          <li>It runs entirely on your device. webgpu.in does not see, store, log or moderate anything you type or it generates.</li>
+          <li>Outputs are not advice (medical, legal, financial or otherwise) and are not endorsed by webgpu.in.</li>
+          <li>You are solely responsible for what you generate and how you use it, including complying with the laws that apply to you. Do not use it to harm anyone.</li>
+          <li>Provided &ldquo;as is&rdquo;, without warranty. To the fullest extent permitted by law, webgpu.in is not liable for any outputs or their use.</li>
+        </ul>
+        <label style={{ display: "flex", gap: 10, alignItems: "flex-start", marginTop: 18, fontSize: 13.5, cursor: "pointer" }}>
+          <input type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} style={{ marginTop: 3 }} />
+          <span>I am 18 years or older (or the age of majority where I live).</span>
+        </label>
+        <label style={{ display: "flex", gap: 10, alignItems: "flex-start", marginTop: 10, fontSize: 13.5, cursor: "pointer" }}>
+          <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} style={{ marginTop: 3 }} />
+          <span>I accept full responsibility for what I generate and agree to the <a href="/terms" target="_blank" style={{ color: "var(--accent)" }}>Terms of Use</a>.</span>
+        </label>
+        <div style={{ display: "flex", gap: 10, marginTop: 22, flexWrap: "wrap" }}>
+          <button onClick={onAccept} disabled={!ok} style={{ ...btn, opacity: ok ? 1 : 0.4, cursor: ok ? "pointer" : "not-allowed" }}>
+            I understand — enable
+          </button>
+          <button onClick={onCancel} style={{ ...btn, background: "var(--surface-2)", color: "var(--text)" }}>Cancel</button>
+        </div>
       </div>
     </div>
   );

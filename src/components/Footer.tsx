@@ -18,6 +18,7 @@ const LINKS = [
   { name: "Video Tools", href: "/free-ai-video-tools" },
   { name: "Hinglish Subs", href: "/hinglish-subtitles" },
   { name: "No Watermark", href: "/no-watermark" },
+  { name: "Terms", href: "/terms" },
   { name: "GitHub", href: "https://github.com/0pium13/webgpu" },
 ];
 
