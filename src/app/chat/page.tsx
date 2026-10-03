@@ -43,18 +43,18 @@ function saveConsent() {
 
 const MODELS: { id: string; label: string; size: string; vram: string; hint: string; unfiltered?: boolean }[] = [
   {
-    id: "Llama-3.2-1B-Instruct-q4f16_1-MLC",
-    label: "Llama 3.2 1B", size: "~700MB", vram: "1GB VRAM",
+    id: "Qwen3.5-0.8B-q4f16_1-MLC",
+    label: "Qwen3.5 0.8B", size: "~450MB", vram: "1.6GB VRAM",
     hint: "Fastest — instant answers, light GPUs",
   },
   {
-    id: "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",
-    label: "Qwen 2.5 1.5B", size: "~950MB", vram: "1.6GB VRAM",
-    hint: "Best multilingual — good Hindi",
+    id: "Qwen3.5-2B-q4f16_1-MLC",
+    label: "Qwen3.5 2B", size: "~1.1GB", vram: "2.2GB VRAM",
+    hint: "Balanced — strong multilingual, good Hindi",
   },
   {
-    id: "Llama-3.2-3B-Instruct-q4f16_1-MLC",
-    label: "Llama 3.2 3B", size: "~1.7GB", vram: "2.3GB VRAM",
+    id: "Qwen3.5-4B-q4f16_1-MLC",
+    label: "Qwen3.5 4B", size: "~2.4GB", vram: "3.9GB VRAM",
     hint: "Smartest — needs a real GPU",
   },
   {
@@ -177,6 +177,9 @@ export default function ChatPage() {
         messages: [{ role: "system", content: SYSTEM_PROMPT }, ...history],
         stream: true,
         temperature: 0.7,
+        // Qwen3.5 reasons in a <think> block by default — for chat we want
+        // the answer immediately, not seconds of hidden monologue.
+        extra_body: { enable_thinking: false },
       });
       for await (const chunk of stream) {
         if (stopRef.current) break;
@@ -185,7 +188,9 @@ export default function ChatPage() {
         out += delta;
         nTok++;
         setTokSec(Math.round(nTok / ((performance.now() - t0) / 1000)));
-        setMsgs([...history, { role: "assistant", content: out }]);
+        // safety net: never show a reasoning block if one slips through
+        const shown = out.replace(/<think>[\s\S]*?(<\/think>|$)/g, "").trimStart();
+        setMsgs([...history, { role: "assistant", content: shown }]);
         scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
       }
       setPhase("ready");
