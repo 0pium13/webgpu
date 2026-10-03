@@ -25,6 +25,7 @@ export interface SamPoint {
 }
 
 export interface SamSession {
+  which: SegModel;
   embeddings: any;
   originalSizes: any;
   reshapedSizes: any;
@@ -38,57 +39,83 @@ export interface MaskResult {
   score: number;
 }
 
-let modelPromise: Promise<{ model: any; processor: any; Tensor: any; RawImage: any }> | null = null;
-registerModel(["/erase", "/rotoscope"], () => { const p = modelPromise; modelPromise = null; return p; });
+/**
+ * Two segmenters behind one interface:
+ *  - "sam2": SAM 2.1 Hiera-tiny — best mattes from a single click; used for
+ *    interactive selection.
+ *  - "edgetam": EdgeTAM (RepViT encoder, ~40MB fp32) — matches SAM2 on box
+ *    prompts (~0.96 mask IoU) at ~2.3x the encode speed; used per frame by the
+ *    video tracker. fp32 because its fp16 encoder loses ~8 IoU points. Weak on
+ *    single-click prompts (tends to pick a part), so not used for selection.
+ */
+export type SegModel = "sam2" | "edgetam";
+
+const MODELS: Record<SegModel, { id: string; cls: string; gpuDtype: any }> = {
+  sam2: { id: MODEL_ID, cls: "Sam2Model", gpuDtype: { vision_encoder: "fp16", prompt_encoder_mask_decoder: "fp32" } },
+  edgetam: { id: "onnx-community/EdgeTAM-ONNX", cls: "EdgeTamModel", gpuDtype: "fp32" },
+};
+
+type Loaded = { model: any; processor: any; Tensor: any; RawImage: any };
+const modelPromises: Partial<Record<SegModel, Promise<Loaded>>> = {};
+registerModel(["/erase", "/rotoscope"], () => { const p = modelPromises.sam2 ?? null; delete modelPromises.sam2; return p; });
+registerModel(["/rotoscope"], () => { const p = modelPromises.edgetam ?? null; delete modelPromises.edgetam; return p; });
 let usedDevice: "webgpu" | "wasm" = "webgpu";
 
 export function samDevice() {
   return usedDevice;
 }
 
-export async function loadSAM(onProgress?: (p: any) => void) {
-  if (modelPromise) return modelPromise;
-  modelPromise = (async () => {
+export async function loadSAM(onProgress?: (p: any) => void, which: SegModel = "sam2") {
+  const cached = modelPromises[which];
+  if (cached) return cached;
+  const cfg = MODELS[which];
+  const p = (async () => {
     const tj: any = await import("@huggingface/transformers");
-    const { Sam2Model, AutoProcessor, Tensor, RawImage, env } = tj;
+    const { AutoProcessor, Tensor, RawImage, env } = tj;
+    const Cls = tj[cfg.cls];
     env.allowLocalModels = false;
 
     let model;
     const want = await tjsDevice(); // Safari <26 / unknown WebKit → wasm
     try {
-      model = await Sam2Model.from_pretrained(MODEL_ID, {
-        dtype: want === "wasm" ? "fp32" : { vision_encoder: "fp16", prompt_encoder_mask_decoder: "fp32" },
+      model = await Cls.from_pretrained(cfg.id, {
+        dtype: want === "wasm" ? "fp32" : cfg.gpuDtype,
         device: want,
         progress_callback: onProgress,
       });
       usedDevice = want;
     } catch (e) {
-      console.warn("[sam2] webgpu load failed, falling back to wasm", e);
-      model = await Sam2Model.from_pretrained(MODEL_ID, {
+      console.warn(`[${which}] webgpu load failed, falling back to wasm`, e);
+      model = await Cls.from_pretrained(cfg.id, {
         dtype: "fp32",
         device: "wasm",
         progress_callback: onProgress,
       });
       usedDevice = "wasm";
     }
-    const processor = await AutoProcessor.from_pretrained(MODEL_ID);
+    const processor = await AutoProcessor.from_pretrained(cfg.id);
     return { model, processor, Tensor, RawImage };
   })();
-  return modelPromise;
+  modelPromises[which] = p;
+  p.catch(() => { if (modelPromises[which] === p) delete modelPromises[which]; });
+  return p;
 }
 
 /** Build a transformers.js RawImage from a canvas. */
 export async function rawImageFromCanvas(canvas: HTMLCanvasElement) {
-  const { RawImage } = await loadSAM();
-  return RawImage.fromURL(canvas.toDataURL("image/png"));
+  const { RawImage } = await import("@huggingface/transformers");
+  // raw pixels, not a PNG data-URL round trip (~10-80ms per video frame)
+  const { data, width, height } = canvas.getContext("2d", { willReadFrequently: true })!.getImageData(0, 0, canvas.width, canvas.height);
+  return new RawImage(data, width, height, 4);
 }
 
 /** Heavy step: run the image encoder once for this frame. */
-export async function embedImage(raw: any): Promise<SamSession> {
-  const { model, processor } = await loadSAM();
+export async function embedImage(raw: any, which: SegModel = "sam2"): Promise<SamSession> {
+  const { model, processor } = await loadSAM(undefined, which);
   const inputs = await processor(raw);
   const embeddings = await model.get_image_embeddings(inputs);
   return {
+    which,
     embeddings,
     originalSizes: inputs.original_sizes,
     reshapedSizes: inputs.reshaped_input_sizes,
@@ -98,7 +125,7 @@ export async function embedImage(raw: any): Promise<SamSession> {
 
 /** Shared: pick the highest-IoU mask from a decoder output and flatten it. */
 async function extractBestMask(session: SamSession, outputs: any): Promise<MaskResult> {
-  const { processor } = await loadSAM();
+  const { processor } = await loadSAM(undefined, session.which);
   const masks = await processor.post_process_masks(
     outputs.pred_masks,
     session.originalSizes,
@@ -125,7 +152,7 @@ async function extractBestMask(session: SamSession, outputs: any): Promise<MaskR
 
 /** Fast step: decode a mask from the current set of click points. */
 export async function decodeMask(session: SamSession, points: SamPoint[]): Promise<MaskResult> {
-  const { model, Tensor } = await loadSAM();
+  const { model, Tensor } = await loadSAM(undefined, session.which);
   const [rh, rw] = session.reshaped;
 
   const coords: number[] = [];
@@ -143,7 +170,7 @@ export async function decodeFromBox(
   session: SamSession,
   box: { x1: number; y1: number; x2: number; y2: number }
 ): Promise<MaskResult> {
-  const { model, Tensor } = await loadSAM();
+  const { model, Tensor } = await loadSAM(undefined, session.which);
   const [rh, rw] = session.reshaped;
   const coords = [box.x1 * rw, box.y1 * rh, box.x2 * rw, box.y2 * rh];
   const input_boxes = new Tensor("float32", coords, [1, 1, 4]);

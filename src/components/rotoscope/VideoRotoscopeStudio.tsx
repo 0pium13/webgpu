@@ -76,7 +76,7 @@ export default function VideoRotoscopeStudio({ input, onReset }: { input: RotoFi
 
         setProgress({ label: "Loading AI models", pct: 0 });
         const dl = (p: any) => { if (p?.status === "progress" && p.total) setProgress({ label: "Loading AI models", pct: Math.round((p.loaded / p.total) * 100) }); };
-        await Promise.all([loadSAM(dl), loadDetector(dl)]);
+        await Promise.all([loadSAM(dl), loadSAM(dl, "edgetam"), loadDetector(dl)]);
 
         setProgress({ label: "Finding objects", pct: 0 });
         const raw = await rawImageFromCanvas(base);

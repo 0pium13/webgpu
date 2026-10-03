@@ -3,9 +3,9 @@
 /**
  * Hybrid video object tracker — follows a selected object across every frame.
  *
- * SAM2's ONNX exports don't include the memory graphs that power its learned
- * video propagation, so we drive the per-frame SAM2 segmenter (sam2.ts) with
- * our own tracking logic:
+ * SAM2/EdgeTAM ONNX exports don't include the memory graphs that power their
+ * learned video propagation, so we drive a per-frame segmenter (EdgeTAM — the
+ * fast one in sam2.ts) with our own tracking logic:
  *
  *   1. Detection re-association (primary): each frame, re-detect objects and
  *      match the same-class box that overlaps the previous frame's box most.
@@ -144,7 +144,7 @@ export async function trackObject(opts: TrackOptions): Promise<FrameResult[]> {
     wctx.drawImage(video, 0, 0, dims.w, dims.h);
 
     const raw = await rawImageFromCanvas(work);
-    const session = await embedImage(raw);
+    const session = await embedImage(raw, "edgetam");
 
     let mask: MaskResult;
     let box: Box;

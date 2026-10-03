@@ -1,19 +1,25 @@
 "use client";
 
 /**
- * Automatic object detection (DETR) in-browser via transformers.js.
+ * Automatic object detection (RF-DETR medium, Apache-2.0) in-browser via
+ * transformers.js.
  *
  * Runs once per frame so the user picks from real, labelled detections
  * ("person 98%", "cup 87%") instead of blindly clicking and hoping SAM
  * guesses the right object. Detections feed SAM as box prompts, which produce
- * far cleaner masks than a single click point. WebGPU with wasm fallback —
- * this is a one-shot pass per frame, so even the wasm path is acceptable.
+ * far cleaner masks than a single click point. WebGPU with wasm fallback.
+ *
+ * Replaced DETR-ResNet-50: ~100ms vs ~350-500ms per frame on WebGPU (it also
+ * runs every frame in the video tracker) with one clean box per object where
+ * DETR emitted duplicates. fp32 only — the fp16 export returns no boxes, and
+ * q8 is no faster on wasm. Input is fixed at 576px (position embeddings).
  */
 
 import { tjsDevice } from "./gpuBackend";
 import { registerModel } from "@/lib/modelRegistry";
+import { rawImageFromCanvas } from "@/lib/sam2";
 
-const DETECT_MODEL = "Xenova/detr-resnet-50";
+const DETECT_MODEL = "onnx-community/rfdetr_medium-ONNX";
 
 export interface Detection {
   label: string;
@@ -52,6 +58,7 @@ export async function loadDetector(onProgress?: (p: any) => void): Promise<any> 
       console.warn("[detect] webgpu failed, wasm fallback", e);
       const det = await pipeline("object-detection", DETECT_MODEL, {
         device: "wasm",
+        dtype: "fp32",
         progress_callback: onProgress,
       });
       detectDevice = "wasm";
@@ -67,8 +74,7 @@ export async function detectObjects(
   threshold = 0.5
 ): Promise<Detection[]> {
   const detector = await loadDetector();
-  const { RawImage } = await getTJ();
-  const raw = await RawImage.fromURL(canvas.toDataURL("image/png"));
+  const raw = await rawImageFromCanvas(canvas);
 
   const w = canvas.width;
   const h = canvas.height;
