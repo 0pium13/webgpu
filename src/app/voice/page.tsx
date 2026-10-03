@@ -5,10 +5,7 @@
  * browser, with a proper Hindi voice. ElevenLabs charges for this; here the
  * only cost is your own silicon.
  *
- * Voice CLONING (reference audio → your voice) is not here yet, honestly:
- * every browser port of the cloning models ships only the audio DECODER —
- * encoding a reference voice needs a WavTokenizer-encoder ONNX that nobody
- * has published. It's on the build-from-scratch list, not faked with presets.
+ * Voice CLONING lives in CloneStudio (Chatterbox Multilingual, in-browser).
  */
 
 import { useRef, useState } from "react";
@@ -275,8 +272,8 @@ export default function VoicePage() {
           )}
 
           <p className="mono" style={{ fontSize: 11, color: "var(--text-dim)", lineHeight: 1.7 }}>
-            Want it in a specific person&apos;s voice? Switch to Clone a voice —
-            we built the in-browser encoder for it because none existed.
+            Want it in a specific person&apos;s voice — or in Hindi? Switch to
+            Clone a voice: 10 seconds of a real voice, 20 languages, all on your GPU.
           </p>
         </div>
       </div>

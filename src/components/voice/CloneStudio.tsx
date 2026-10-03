@@ -3,9 +3,9 @@
 /**
  * Clone a voice — two engines, you pick the tradeoff:
  *
- *  • On your GPU (OuteTTS): free forever, fully private (nothing leaves the
- *    tab), works offline. Recognisable resemblance, but flat/robotic prosody —
- *    a small browser-sized model.
+ *  • On your GPU (Chatterbox Multilingual): free forever, fully private
+ *    (nothing leaves the tab), works offline. Natural prosody, 20 languages
+ *    including Hindi, adjustable expressiveness. ~830MB one-time download.
  *  • Studio (ElevenLabs, your key): near-perfect human voice with real emotion.
  *    Needs your own ElevenLabs key + a paid plan; your clip + text are sent to
  *    ElevenLabs. This is the "no compromise" tier a browser can't run locally.
@@ -15,7 +15,7 @@ import { useRef, useState, useEffect } from "react";
 import ModelLoader from "@/components/ModelLoader";
 import { SparkleIcon, VoiceIcon } from "@/components/Icons";
 import {
-  buildSpeaker, cloneSpeak, encodeWav,
+  buildSpeaker, cloneSpeak, encodeWav, CLONE_LANGUAGES,
   type ClonedSpeaker, type ClonePhase,
 } from "@/lib/voiceClone";
 import { createClonedVoice, speak as elSpeak, deleteVoice, EL_MODELS } from "@/lib/elevenlabs";
@@ -24,10 +24,7 @@ type Phase = "idle" | "building" | "ready" | "generating" | "error";
 type Engine = "local" | "elevenlabs";
 
 const DL_TITLES: Record<string, { title: string; sub: string }> = {
-  encoder: { title: "Downloading the voice encoder", sub: "44MB · our own export — no cloud has this" },
-  whisper: { title: "Whisper is coming to listen", sub: "~145MB · downloads once, cached forever" },
-  aligner: { title: "Loading the word aligner", sub: "~95MB · finds each word to the frame" },
-  model: { title: "The voice engine is waking up", sub: "~460MB · downloads once, cached forever" },
+  model: { title: "The voice engine is waking up", sub: "~830MB · downloads once, cached forever" },
 };
 
 async function blobDuration(url: string): Promise<number> {
@@ -50,6 +47,8 @@ export default function CloneStudio() {
   const [errMsg, setErrMsg] = useState("");
   const [result, setResult] = useState<{ url: string; secs: number; ext: string } | null>(null);
   const [drag, setDrag] = useState(false);
+  const [lang, setLang] = useState("en");
+  const [expr, setExpr] = useState(0.5);
 
   // ElevenLabs (BYOK) state
   const [elKey, setElKey] = useState("");
@@ -62,14 +61,14 @@ export default function CloneStudio() {
   function saveKey(k: string) { setElKey(k); localStorage.setItem("el_key", k); }
 
   const onPhase = (p: ClonePhase) => {
-    if (p.step === "encoder" || p.step === "whisper" || p.step === "aligner" || p.step === "model") {
+    if (p.step === "model") {
       setDl({ kind: p.step, pct: p.pct });
       setStatusMsg("");
     } else {
       setDl(null);
       setStatusMsg(
-        p.step === "listening" ? "Listening to the reference…" :
         p.step === "encoding" ? "Learning the voice…" :
+        p.parts > 1 ? `Speaking in the cloned voice… part ${p.part} of ${p.parts}` :
         "Speaking in the cloned voice…"
       );
     }
@@ -133,7 +132,7 @@ export default function CloneStudio() {
         ext = "mp3";
       } else {
         if (!speaker) throw new Error("Learn a voice first.");
-        const { samples, sampleRate } = await cloneSpeak(t, speaker, onPhase);
+        const { samples, sampleRate } = await cloneSpeak(t, speaker, lang, expr, onPhase);
         url = URL.createObjectURL(encodeWav(samples, sampleRate));
         secs = samples.length / sampleRate;
         ext = "wav";
@@ -166,7 +165,6 @@ export default function CloneStudio() {
 
   const busy = phase === "building" || phase === "generating";
   const hasVoice = engine === "local" ? !!speaker : !!elFile;
-  const refSecs = speaker ? speaker.words.reduce((a, w) => a + w.duration, 0) : 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -175,7 +173,7 @@ export default function CloneStudio() {
         <button onClick={() => switchEngine("local")} style={{ ...engineCard, borderColor: engine === "local" ? "var(--accent)" : "var(--border)" }}>
           <span style={{ fontSize: 13.5, fontWeight: 600 }}>On your GPU · free</span>
           <span className="mono" style={{ fontSize: 10.5, color: "var(--text-dim)", lineHeight: 1.5 }}>
-            Private, offline, $0 · resemblance clone, a little robotic
+            Private, offline, $0 · natural voice · Hindi + 19 more languages
           </span>
         </button>
         <button onClick={() => switchEngine("elevenlabs")} style={{ ...engineCard, borderColor: engine === "elevenlabs" ? "var(--accent)" : "var(--border)" }}>
@@ -258,7 +256,7 @@ export default function CloneStudio() {
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--green)" }} />
             <p style={{ fontSize: 13.5, fontWeight: 500, flex: 1 }}>
               {engine === "local"
-                ? <>Voice learned from {refName} <span className="mono" style={{ color: "var(--text-dim)", fontWeight: 400 }}>· {speaker!.words.length} words · {refSecs.toFixed(1)}s</span></>
+                ? <>Voice learned from {refName} <span className="mono" style={{ color: "var(--text-dim)", fontWeight: 400 }}>· {speaker!.seconds.toFixed(1)}s of reference</span></>
                 : <>Reference ready: {refName} <span className="mono" style={{ color: "var(--text-dim)", fontWeight: 400 }}>· ElevenLabs clones it on first take</span></>}
             </p>
             <button onClick={resetVoice} style={{
@@ -268,11 +266,6 @@ export default function CloneStudio() {
               ← Different voice
             </button>
           </div>
-          {engine === "local" && (
-            <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 8, fontStyle: "italic", lineHeight: 1.5 }}>
-              heard: &quot;{speaker!.text.slice(0, 140)}{speaker!.text.length > 140 ? "…" : ""}&quot;
-            </p>
-          )}
         </div>
       )}
 
@@ -281,7 +274,7 @@ export default function CloneStudio() {
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={engine === "local" ? "Now type anything — it comes out in that voice… (English v1)" : "Type anything — 29 languages supported…"}
+            placeholder={engine === "local" ? "Now type anything — it comes out in that voice…" : "Type anything — 29 languages supported…"}
             rows={4}
             style={{
               width: "100%", resize: "vertical", background: "var(--surface)", color: "var(--text)",
@@ -289,6 +282,18 @@ export default function CloneStudio() {
               fontSize: 15, lineHeight: 1.6, outline: "none", fontFamily: "inherit",
             }}
           />
+          {engine === "local" && (
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+              <select value={lang} onChange={(e) => setLang(e.target.value)} aria-label="Language of the text" style={{ ...field, minWidth: 170 }}>
+                {CLONE_LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+              </select>
+              <label style={{ ...field, display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 220 }}>
+                <span style={{ fontSize: 12.5, color: "var(--text-muted)", whiteSpace: "nowrap" }}>Expressiveness</span>
+                <input type="range" min={0.25} max={1} step={0.05} value={expr} onChange={(e) => setExpr(Number(e.target.value))} style={{ flex: 1, accentColor: "var(--accent)" }} />
+                <span className="mono" style={{ fontSize: 11, color: "var(--text-dim)", width: 30, textAlign: "right" }}>{expr.toFixed(2)}</span>
+              </label>
+            </div>
+          )}
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <button onClick={generate} disabled={!text.trim() || busy} style={{
               background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 12,
@@ -300,7 +305,7 @@ export default function CloneStudio() {
               <SparkleIcon size={16} /> {phase === "generating" ? "Cloning…" : "Speak as this voice"}
             </button>
             <span className="mono" style={{ fontSize: 11.5, color: "var(--text-dim)" }}>
-              {engine === "local" ? "best under ~40 words per take" : "billed to your ElevenLabs credits"}
+              {engine === "local" ? "long scripts are spoken sentence by sentence" : "billed to your ElevenLabs credits"}
             </span>
           </div>
         </>

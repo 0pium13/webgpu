@@ -96,7 +96,7 @@ export type WhisperPhase =
   | { step: "transcribe"; doneSec: number; totalSec: number; lines: SubtitleLine[] };
 
 const asrCache = new Map<ModelKey, Promise<any>>();
-registerModel(["/subtitles", "/voice"], () => {
+registerModel(["/subtitles"], () => {
   const all = [...asrCache.values()];
   asrCache.clear();
   return all.length ? Promise.all(all) : null;
