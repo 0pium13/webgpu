@@ -73,6 +73,20 @@ export function estimateTiles(srcW: number, srcH: number): number {
   return Math.ceil(srcW / CORE) * Math.ceil(srcH / CORE);
 }
 
+/**
+ * Canvas factory that also works inside a Web Worker (OffscreenCanvas), so
+ * the image path can run off the main thread (realesrgan.worker.ts). On the
+ * main thread it stays a real <canvas>, which the video path relies on.
+ * Exported types say HTMLCanvasElement — true for every main-thread caller.
+ */
+type AnyCanvas = HTMLCanvasElement | OffscreenCanvas;
+function mkCanvas(): HTMLCanvasElement {
+  return (typeof document === "undefined" ? new OffscreenCanvas(1, 1) : document.createElement("canvas")) as HTMLCanvasElement;
+}
+function ctx2d(c: AnyCanvas, opts?: CanvasRenderingContext2DSettings): CanvasRenderingContext2D {
+  return c.getContext("2d", opts) as CanvasRenderingContext2D;
+}
+
 /** RGBA region (exactly IN×IN, clamped inside the source) → fp32 CHW 0..1. */
 function regionToTensor(id: ImageData): Float32Array {
   const n = IN * IN;
@@ -96,9 +110,9 @@ function tensorToCanvas(t: Float32Array, size: number): HTMLCanvasElement {
     img.data[i * 4 + 2] = Math.max(0, Math.min(255, t[2 * n + i] * 255));
     img.data[i * 4 + 3] = 255;
   }
-  const c = document.createElement("canvas");
+  const c = mkCanvas();
   c.width = size; c.height = size;
-  c.getContext("2d")!.putImageData(img, 0, 0);
+  ctx2d(c).putImageData(img, 0, 0);
   return c;
 }
 
@@ -153,7 +167,7 @@ function dilateIntoTransparent(id: ImageData, passes: number) {
  */
 function featherLeftTop(c: HTMLCanvasElement, fx: number, fy: number) {
   if (!fx && !fy) return;
-  const ctx = c.getContext("2d")!;
+  const ctx = ctx2d(c);
   ctx.globalCompositeOperation = "destination-in";
   if (fx > 0) {
     const g = ctx.createLinearGradient(0, 0, c.width, 0);
@@ -176,14 +190,14 @@ function featherLeftTop(c: HTMLCanvasElement, fx: number, fy: number) {
 
 /** Rebuild the output's alpha from the original plane, upscaled smoothly. */
 function applyAlpha(out: HTMLCanvasElement, alphaPlane: HTMLCanvasElement) {
-  const s = document.createElement("canvas");
+  const s = mkCanvas();
   s.width = out.width; s.height = out.height;
-  const sctx = s.getContext("2d")!;
+  const sctx = ctx2d(s);
   sctx.imageSmoothingEnabled = true;
   sctx.imageSmoothingQuality = "high";
   sctx.drawImage(alphaPlane, 0, 0, out.width, out.height);
   const a = sctx.getImageData(0, 0, out.width, out.height).data;
-  const octx = out.getContext("2d")!;
+  const octx = ctx2d(out);
   const o = octx.getImageData(0, 0, out.width, out.height);
   for (let i = 3; i < o.data.length; i += 4) o.data[i] = a[i];
   octx.putImageData(o, 0, 0);
@@ -215,19 +229,19 @@ export async function upscaleToCanvas(
   let srcH = (source as any).naturalHeight ?? (source as any).videoHeight ?? (source as any).height;
 
   // stage the source once; tiny sources get bicubic-lifted to the model minimum
-  let stage = document.createElement("canvas");
+  let stage = mkCanvas();
   if (srcW < IN || srcH < IN) {
     const k = Math.max(IN / srcW, IN / srcH);
     stage.width = Math.ceil(srcW * k); stage.height = Math.ceil(srcH * k);
-    const sctx = stage.getContext("2d")!;
+    const sctx = ctx2d(stage);
     sctx.imageSmoothingEnabled = true; sctx.imageSmoothingQuality = "high";
     sctx.drawImage(source as CanvasImageSource, 0, 0, stage.width, stage.height);
     srcW = stage.width; srcH = stage.height;
   } else {
     stage.width = srcW; stage.height = srcH;
-    stage.getContext("2d")!.drawImage(source as CanvasImageSource, 0, 0);
+    ctx2d(stage).drawImage(source as CanvasImageSource, 0, 0);
   }
-  const stageCtx = stage.getContext("2d", { willReadFrequently: true })!;
+  const stageCtx = ctx2d(stage, { willReadFrequently: true });
 
   // Transparency: video frames are always opaque, so only images pay for the
   // scan. When alpha exists we (1) keep the original alpha plane aside,
@@ -240,23 +254,23 @@ export async function upscaleToCanvas(
   if (!isVideo) {
     const full = stageCtx.getImageData(0, 0, srcW, srcH);
     if (scanHasAlpha(full.data)) {
-      alphaPlane = document.createElement("canvas");
+      alphaPlane = mkCanvas();
       alphaPlane.width = srcW; alphaPlane.height = srcH;
       const ai = new ImageData(srcW, srcH);
       for (let i = 0; i < srcW * srcH; i++) {
         ai.data[i * 4] = 255; ai.data[i * 4 + 1] = 255; ai.data[i * 4 + 2] = 255;
         ai.data[i * 4 + 3] = full.data[i * 4 + 3];
       }
-      alphaPlane.getContext("2d")!.putImageData(ai, 0, 0);
+      ctx2d(alphaPlane).putImageData(ai, 0, 0);
       dilateIntoTransparent(full, FEATHER + 2);
       for (let i = 3; i < full.data.length; i += 4) full.data[i] = 255;
       stageCtx.putImageData(full, 0, 0);
     }
   }
 
-  const x4 = document.createElement("canvas");
+  const x4 = mkCanvas();
   x4.width = srcW * SCALE; x4.height = srcH * SCALE;
-  const x4ctx = x4.getContext("2d")!;
+  const x4ctx = ctx2d(x4);
 
   const stepsX = Math.ceil(srcW / CORE);
   const stepsY = Math.ceil(srcH / CORE);
@@ -300,10 +314,10 @@ export async function upscaleToCanvas(
         const tileCanvas = tensorToCanvas(outT.data as Float32Array, outSize);
 
         ox = mL * SCALE; oy = mT * SCALE;
-        coreCanvas = document.createElement("canvas");
+        coreCanvas = mkCanvas();
         coreCanvas.width = (cw + mL) * SCALE;
         coreCanvas.height = (ch + mT) * SCALE;
-        coreCanvas.getContext("2d")!.drawImage(
+        ctx2d(coreCanvas).drawImage(
           tileCanvas,
           (cx - mL - ex) * SCALE, (cy - mT - ey) * SCALE,
           coreCanvas.width, coreCanvas.height,
@@ -329,9 +343,9 @@ export async function upscaleToCanvas(
 
   let outCanvas = x4;
   if (outScale !== SCALE) {
-    const out2 = document.createElement("canvas");
+    const out2 = mkCanvas();
     out2.width = srcW * 2; out2.height = srcH * 2;
-    const o2 = out2.getContext("2d")!;
+    const o2 = ctx2d(out2);
     o2.imageSmoothingEnabled = true;
     o2.imageSmoothingQuality = "high";
     o2.drawImage(x4, 0, 0, out2.width, out2.height);

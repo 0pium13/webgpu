@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { UpscaleFile, UpscaleScale } from "@/app/upscale/page";
-import { upscaleToCanvas, srDevice, type SRProgress } from "@/lib/realesrgan";
+import type { SRProgress } from "@/lib/realesrgan";
+import { upscaleImage, upscaleDevice } from "@/lib/upscaleClient";
 import { titleProgress, titleDone } from "@/lib/bgYield";
 import { SparkleIcon } from "@/components/Icons";
 
@@ -120,10 +121,11 @@ export default function ImageProcessor({
         setMsg(`${mpPainted.current.toFixed(1)} MP of real detail painted`);
       };
 
-      const { canvas: out } = await upscaleToCanvas(imgRef.current, multiplier, onProgress);
+      // tiles run in a Web Worker (upscaleClient) — the page never janks,
+      // even on 6000px jobs; tiles still stream into the live preview
+      const { blob } = await upscaleImage(imgRef.current, multiplier, onProgress);
       clearInterval(timer);
 
-      const blob: Blob = await new Promise((res) => out.toBlob((b) => res(b!), "image/png"));
       setOutputUrl(URL.createObjectURL(blob));
       setOutSize(blob.size);
       setPhase("done");
@@ -268,7 +270,7 @@ export default function ImageProcessor({
         <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px,1fr))", gap: 10 }}>
             <Stat label="Resolution" value={`${outW}×${outH}`} />
-            <Stat label="Engine" value={`Real-ESRGAN · ${srDevice() === "webgpu" ? "GPU" : "CPU"}`} />
+            <Stat label="Engine" value={`Real-ESRGAN · ${upscaleDevice() === "webgpu" ? "GPU" : "CPU"}`} />
             <Stat label="Size" value={formatBytes(outSize)} />
             <Stat label="Format" value="PNG" />
           </div>

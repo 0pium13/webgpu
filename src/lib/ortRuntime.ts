@@ -18,6 +18,18 @@ let ortPromise: Promise<any> | null = null;
 
 export function loadOrt(): Promise<any> {
   if (ortPromise) return ortPromise;
+  // Inside a Web Worker there's no document to inject a <script> into, and
+  // module workers can't importScripts — load ORT's ESM build instead.
+  if (typeof document === "undefined") {
+    ortPromise = import(/* webpackIgnore: true */ /* turbopackIgnore: true */ `${ORT_BASE}/ort.webgpu.min.mjs`)
+      .then((mod: any) => {
+        const ort = mod.default ?? mod;
+        configure(ort);
+        return ort;
+      });
+    ortPromise.catch(() => { ortPromise = null; });
+    return ortPromise;
+  }
   ortPromise = new Promise((resolve, reject) => {
     const w = window as any;
     if (w.ort) { configure(w.ort); resolve(w.ort); return; }
