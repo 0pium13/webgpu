@@ -1,5 +1,6 @@
-import { registerModel } from "@/lib/modelRegistry";
 "use client";
+
+import { registerModel } from "@/lib/modelRegistry";
 
 /**
  * MediaPipe Selfie Segmenter — real-time person/background mask (249KB model,

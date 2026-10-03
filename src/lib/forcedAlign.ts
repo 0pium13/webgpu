@@ -1,5 +1,6 @@
-import { registerModel } from "@/lib/modelRegistry";
 "use client";
+
+import { registerModel } from "@/lib/modelRegistry";
 
 /**
  * CTC forced alignment in the browser — wav2vec2-base-960h emissions + a
