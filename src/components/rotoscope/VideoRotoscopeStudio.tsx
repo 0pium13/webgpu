@@ -76,11 +76,16 @@ export default function VideoRotoscopeStudio({ input, onReset }: { input: RotoFi
 
         setProgress({ label: "Loading AI models", pct: 0 });
         const dl = (p: any) => { if (p?.status === "progress" && p.total) setProgress({ label: "Loading AI models", pct: Math.round((p.loaded / p.total) * 100) }); };
-        await Promise.all([loadSAM(dl), loadSAM(dl, "edgetam"), loadDetector(dl)]);
+        // one at a time: concurrent session loads/runs on the shared ORT
+        // instance intermittently fail ("operation does not support unaligned accesses")
+        await loadDetector(dl);
+        await loadSAM(dl);
+        await loadSAM(dl, "edgetam");
 
         setProgress({ label: "Finding objects", pct: 0 });
         const raw = await rawImageFromCanvas(base);
-        const [session, dets] = await Promise.all([embedImage(raw), detectObjects(base, 0.5)]);
+        const dets = await detectObjects(base, 0.5);
+        const session = await embedImage(raw);
         sessionRef.current = session;
         setDetections(dets);
         setProgress(null);

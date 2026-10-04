@@ -91,17 +91,18 @@ export default function MagicEraserStudio({ file, onReset }: { file: File; onRes
     setDetections([]);
     samRef.current = null;
     try {
-      // detection list + SAM embeddings in parallel — by the time the user
-      // picks an object, the segmenter is usually already warm
-      const [dets, session] = await Promise.all([
-        detectObjects(src, 0.5),
-        (async () => embedImage(await rawImageFromCanvas(src)))(),
-      ]);
+      // Sequential, not Promise.all: loading/running RF-DETR and SAM2 at once on
+      // the shared ORT instance intermittently fails warm loads with
+      // "operation does not support unaligned accesses".
+      const dets = await detectObjects(src, 0.5);
       if (detRunRef.current !== runId) return; // image changed mid-scan
-      samRef.current = session;
       setDetections(dets.slice(0, 12));
       setShowBoxes(true);
       setDetState("ready");
+      // warm the segmenter so a click cuts instantly
+      const session = await embedImage(await rawImageFromCanvas(src));
+      if (detRunRef.current !== runId) return;
+      if (!samRef.current) samRef.current = session;
     } catch (e) {
       console.warn("[eraser] detection unavailable, brush still works", e);
       if (detRunRef.current === runId) setDetState("failed");

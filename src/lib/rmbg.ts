@@ -5,6 +5,7 @@
  * page composites it onto the original pixels.
  */
 import { tjsDevice } from "./gpuBackend";
+import { configureTransformersCache } from "./modelCache";
 import { registerModel } from "./modelRegistry";
 
 export type RmbgProgress = (p: { status?: string; loaded?: number; total?: number }) => void;
@@ -18,6 +19,7 @@ function loadRmbg(progress: RmbgProgress, onFallback: () => void) {
   rmbgPromise = (async () => {
     const { AutoModel, AutoProcessor, RawImage, env } = await import("@huggingface/transformers");
     env.allowLocalModels = false;
+    configureTransformersCache(env);
     // WebGPU on Chromium + Safari 26+; older WebKit → wasm (fp32: wasm can't
     // run 4-bit, and a quantized default throws "Missing required scale").
     const dev = await tjsDevice();

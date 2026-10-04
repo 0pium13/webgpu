@@ -23,6 +23,7 @@ const ISO = 25;
 
 import { loadOrt, createSession } from "@/lib/ortRuntime";
 import { tjsDevice } from "@/lib/gpuBackend";
+import { configureTransformersCache } from "@/lib/modelCache";
 import { uiYield } from "@/lib/bgYield";
 import { registerModel } from "@/lib/modelRegistry";
 
@@ -79,6 +80,7 @@ async function cutoutSubject(img: HTMLImageElement): Promise<HTMLCanvasElement> 
   const tj: any = await import("@huggingface/transformers");
   const { AutoModel, AutoProcessor, RawImage, env } = tj;
   env.allowLocalModels = false;
+  configureTransformersCache(env);
   let model: any, processor: any;
   const want = await tjsDevice(); // Safari <26 / unknown WebKit → wasm
   try {

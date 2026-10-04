@@ -23,7 +23,7 @@ export type SiteContent = {
 };
 
 export const TOOL_ORDER = [
-  "/upscale", "/rotoscope", "/bg-remove", "/image-to-3d", "/subtitles",
+  "/upscale", "/rotoscope", "/bg-remove", "/exam-photo", "/image-to-3d", "/subtitles",
   "/erase", "/convert", "/pdf", "/voice", "/webcam", "/chat", "/code",
 ] as const;
 
@@ -37,6 +37,7 @@ export const DEFAULT_CONTENT: SiteContent = {
     "/upscale": { name: "Upscaler", desc: "Real AI detail reconstruction. Up to 4K." },
     "/rotoscope": { name: "Rotoscope", desc: "Cut out and track any object, even in video." },
     "/bg-remove": { name: "Background Remover", desc: "Instant, clean edges. One click." },
+    "/exam-photo": { name: "Exam Photo Resizer", desc: "UPSC, SSC, IBPS photo + signature. Exact px, exact KB." },
     "/image-to-3d": { name: "Image to 3D", desc: "One photo becomes a real 3D model. Export GLB, OBJ, STL." },
     "/subtitles": { name: "Auto Subtitles", desc: "Hinglish captions + 27 languages. Live, on your GPU." },
     "/erase": { name: "Magic Eraser", desc: "Paint over anything. AI rebuilds what was behind it." },

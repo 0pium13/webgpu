@@ -69,9 +69,10 @@ export const TOOL_META: Record<string, ToolMeta> = {
     keywords: [
       "remove background free", "background remover no watermark", "remove bg",
       "transparent background maker", "background eraser online", "product photo background",
+      "bulk background remover", "amazon product photo white background", "flipkart product image white background",
     ],
     appName: "Background Remover — free, no upload",
-    related: ["erase", "upscale", "image-to-3d"],
+    related: ["exam-photo", "erase", "upscale", "image-to-3d"],
     faqs: [
       {
         q: "Is there a watermark or resolution limit?",
@@ -87,7 +88,57 @@ export const TOOL_META: Record<string, ToolMeta> = {
       },
       {
         q: "Can I batch process images?",
-        a: "One at a time today, but with no daily limits — run as many as you like, back to back.",
+        a: "Yes — drop up to 200 images (or a whole folder) at once. They run one after another on your GPU with a live progress grid, then download as a single ZIP. Change the output settings afterwards and every finished image re-renders instantly, without re-running the AI.",
+      },
+      {
+        q: "Will the photos meet Amazon, Flipkart and Meesho image rules?",
+        a: "Marketplace mode is built for it: a square canvas at 1000, 1500 or 2000 px, pure white #FFFFFF background, and the product centred to fill about 88% of the frame — inside Amazon.in and Flipkart's 85% rule. Export as JPG, with an optional soft contact shadow. Flipkart apparel needs light grey instead, which is one tap.",
+      },
+    ],
+  },
+  "exam-photo": {
+    slug: "exam-photo",
+    title: "Exam Photo Resizer — UPSC, SSC, IBPS Photo & Signature",
+    description:
+      "Resize your photo and signature to the exact pixels and KB for UPSC, SSC, IBPS, SBI, RRB, NEET, JEE and GATE forms. Face auto-crop, white background, name & date. Free, nothing uploaded.",
+    keywords: [
+      "exam photo resize", "upsc photo resize", "ssc photo signature resize", "ibps photo size",
+      "photo resize 20kb to 50kb", "signature resize 10kb to 20kb", "neet photo size",
+      "jee main photo size", "sbi po photo size", "rrb ntpc photo size", "gate photo size",
+      "passport size photo for exam form", "photo with name and date for upsc",
+      "photo ka size kaise kam kare", "photo kb kam kaise kare", "फोटो का साइज कम करें",
+      "फोटो को 50 kb में कैसे करें", "सिग्नेचर का साइज कम करें",
+    ],
+    appName: "Exam Photo Resizer — exam photo & signature tool",
+    related: ["bg-remove", "pdf", "upscale"],
+    faqs: [
+      {
+        q: "What photo and signature size do UPSC, SSC and IBPS ask for?",
+        a: "IBPS and SBI (PO/Clerk): photo 200×230 px at 20–50 KB, signature 140×60 px at 10–20 KB, left thumb 240×240 px at 20–50 KB, handwritten declaration 800×400 px at 50–100 KB. NEET and JEE Main: photo 10–200 KB, signature 10–100 KB (CUET signature 10–50 KB). UPSC: photo 20–200 KB with your name and the date printed on it, and three signatures in one image. SSC now captures your photo live; the signature is 10–20 KB at about 6 × 2 cm. Pick your exam in the tool and it sets all of this for you, with a link to the source.",
+      },
+      {
+        q: "How do I get my photo between 20 KB and 50 KB without ruining it?",
+        a: "The tool resizes to the exact pixel size first, then searches JPEG quality for the best-looking file that still fits under the maximum — so you get the highest quality the limit allows, not a blurry guess. It also counts KB strictly (both 1000- and 1024-byte readings), which is why portals don't bounce the file.",
+      },
+      {
+        q: "Is my photo uploaded to any server?",
+        a: "No. Face detection, the white-background AI and the JPEG encoding all run inside your browser. Your face, signature and thumb impression never leave your phone or laptop — unlike most resizer sites, which upload them.",
+      },
+      {
+        q: "Can it add my name and date on the photo for UPSC?",
+        a: "Yes. Turn on Name & date and type them — they're printed in a clean white strip at the bottom, inside the required pixel size. The date defaults to today in DD-MM-YYYY; change it to the day the photo was taken.",
+      },
+      {
+        q: "My background isn't white — can it fix that?",
+        a: "Turn on White background. An AI model (downloaded once, then cached) cuts you out and puts you on pure white, all on your device. For signatures, Auto-clean removes shadows and grey paper and leaves crisp black ink.",
+      },
+      {
+        q: "Why might a portal still reject my photo?",
+        a: "Size is only half of it. Portals also reject blurry photos, glare on spectacles, caps or dark glasses, a face too small in the frame, or a photo that doesn't match your live capture or ID. And rules change between notifications — always compare with your official notice before you submit.",
+      },
+      {
+        q: "फोटो और सिग्नेचर का साइज KB में कैसे कम करें?",
+        a: "ऊपर अपनी परीक्षा चुनें (UPSC, SSC, IBPS, SBI, RRB, NEET, JEE, GATE), फोटो डालें — टूल चेहरा ढूंढकर सही साइज में क्रॉप करता है और JPEG को ठीक उतने KB में लाता है जितना फॉर्म मांगता है (जैसे 20–50 KB)। सिग्नेचर के लिए सफ़ेद कागज़ पर काले पेन से साइन करके फोटो लें। सब कुछ आपके फोन में ही होता है, कुछ भी अपलोड नहीं होता।",
       },
     ],
   },
@@ -251,7 +302,7 @@ export const TOOL_META: Record<string, ToolMeta> = {
       "split pdf", "edit pdf text free", "private pdf tools",
     ],
     appName: "PDF Studio — free private PDF editor",
-    related: ["convert"],
+    related: ["convert", "exam-photo"],
     faqs: [
       {
         q: "Why does it matter that PDFs aren't uploaded?",

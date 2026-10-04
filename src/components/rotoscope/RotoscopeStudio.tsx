@@ -115,16 +115,17 @@ export default function RotoscopeStudio({ input, onReset }: { input: RotoFile; o
             setProgress({ label: "Loading AI models", pct: Math.round((p.loaded / p.total) * 100) });
           }
         };
-        await Promise.all([loadSAM(dl), loadDetector(dl)]);
+        // one at a time: concurrent session loads/runs on the shared ORT
+        // instance intermittently fail ("operation does not support unaligned accesses")
+        await loadDetector(dl);
+        await loadSAM(dl);
         if (cancelled) return;
 
         setStatus("analyzing");
         setProgress({ label: "Finding objects & analyzing frame", pct: 0 });
         const raw = await rawImageFromCanvas(baseRef.current!);
-        const [session, dets] = await Promise.all([
-          embedImage(raw),
-          detectObjects(baseRef.current!, 0.5),
-        ]);
+        const dets = await detectObjects(baseRef.current!, 0.5);
+        const session = await embedImage(raw);
         if (cancelled) return;
         sessionRef.current = session;
         setDetections(dets);

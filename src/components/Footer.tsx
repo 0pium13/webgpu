@@ -6,6 +6,7 @@ const LINKS = [
   { name: "Upscaler", href: "/upscale" },
   { name: "Rotoscope", href: "/rotoscope" },
   { name: "BG Remover", href: "/bg-remove" },
+  { name: "Exam Photo", href: "/exam-photo" },
   { name: "Image to 3D", href: "/image-to-3d" },
   { name: "Subtitles", href: "/subtitles" },
   { name: "Eraser", href: "/erase" },

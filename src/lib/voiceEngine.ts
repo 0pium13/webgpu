@@ -19,6 +19,7 @@
 import { tjsDevice } from "./gpuBackend";
 import { registerModel } from "@/lib/modelRegistry";
 import { keepModelsCached, roomFor } from "./storage";
+import { configureTransformersCache, transformersCache } from "./modelCache";
 
 const MODEL_ID = "BricksDisplay/chatterbox-multilingual-ONNX-q4";
 const REVISION = "171d2d625bf424fd39847c10d4ebdd6612ea81f6";
@@ -67,11 +68,9 @@ const FILES: [string, number][] = [
 
 /** Bytes still to download (files already in transformers.js' cache are free). */
 async function bytesMissing(): Promise<number> {
-  let c: Cache | null = null;
-  try { c = await caches.open("transformers-cache"); } catch { /* no Cache API */ }
   let need = 0;
   for (const [f, size] of FILES) {
-    const hit = c && (await c.match(`https://huggingface.co/${MODEL_ID}/resolve/${REVISION}/${f}`).catch(() => undefined));
+    const hit = await transformersCache.has(`https://huggingface.co/${MODEL_ID}/resolve/${REVISION}/${f}`).catch(() => false);
     if (!hit) need += size;
   }
   return need;
@@ -89,6 +88,7 @@ function getEngine(onPct: (p: number) => void) {
     const tj: any = await import("@huggingface/transformers");
     const { ChatterboxModel, AutoTokenizer, Tensor, env } = tj;
     env.allowLocalModels = false;
+    configureTransformersCache(env);
     const cb = (p: any) => { if (p?.status === "progress_total") onPct(Math.round(p.progress)); };
     const tokenizer = await AutoTokenizer.from_pretrained(MODEL_ID, { revision: REVISION });
     // the repo's files are already q4 under the plain names, hence dtype fp32

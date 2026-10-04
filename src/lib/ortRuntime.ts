@@ -10,6 +10,7 @@
 
 import { ortWebgpuUsable } from "./gpuBackend";
 import { keepModelsCached } from "./storage";
+import { chunkedCache, resumableFetch } from "./modelCache";
 
 const ORT_VERSION = "1.23.0";
 const ORT_BASE = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_VERSION}/dist`;
@@ -51,68 +52,74 @@ function configure(ort: any) {
   ort.env.logLevel = "fatal"; // session-assignment warnings otherwise flood the console
 }
 
-const MODEL_CACHE = "webgpu-models-v1";
+const modelCache = chunkedCache("webgpu-models-v1");
+
+/** Drop a possibly-corrupt cached model so the next load refetches it fresh. */
+async function evictModel(url: string): Promise<void> {
+  await modelCache.delete(url).catch(() => { /* nothing to evict */ });
+}
+
+/** Read a body into one buffer, preallocated from content-length (no chunk list + concat copy). */
+async function readBody(resp: Response, onProgress?: (loadedBytes: number, totalBytes: number) => void): Promise<Uint8Array> {
+  if (!resp.body) return new Uint8Array(await resp.arrayBuffer());
+  const total = Number(resp.headers.get("content-length") ?? 0);
+  let buf = new Uint8Array(total);
+  let loaded = 0;
+  const reader = resp.body.getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (loaded + value.byteLength > buf.byteLength) { // length unknown or understated
+      const grown = new Uint8Array(Math.max(loaded + value.byteLength, buf.byteLength * 2));
+      grown.set(buf.subarray(0, loaded));
+      buf = grown;
+    }
+    buf.set(value, loaded);
+    loaded += value.byteLength;
+    onProgress?.(loaded, total);
+  }
+  return loaded === buf.byteLength ? buf : buf.slice(0, loaded);
+}
 
 /**
  * Fetch a model's bytes, caching them in the Cache API keyed by the stable
  * HuggingFace URL. Without this every visit re-downloads the model (hundreds
  * of MB for GFPGAN/3D): the HF URL 302-redirects to a *signed* CDN URL that
  * changes each time, so the browser HTTP cache never hits. A cache hit here
- * makes the second load instant. All failures are non-fatal — we just fetch.
+ * makes the second load instant. Big files are stored in parts (modelCache.ts)
+ * and a dropped download resumes via Range. Cache failures are non-fatal.
  */
-/** Drop a possibly-corrupt cached model so the next load refetches it fresh. */
-async function evictModel(url: string): Promise<void> {
-  try { const c = await caches.open(MODEL_CACHE); await c.delete(url); } catch { /* nothing to evict */ }
-}
-
 export async function fetchModelBytes(
   url: string,
   onProgress: ((loadedBytes: number, totalBytes: number) => void) | undefined,
   skipCache: boolean
 ): Promise<{ buf: Uint8Array; fromCache: boolean }> {
-  let cache: Cache | null = null;
-  try { cache = await caches.open(MODEL_CACHE); } catch { cache = null; }
-
-  if (cache && !skipCache) {
+  if (!skipCache) {
     try {
-      const hit = await cache.match(url);
+      const hit = await modelCache.match(url);
       if (hit) {
-        const buf = new Uint8Array(await hit.arrayBuffer());
         // guard against a truncated entry: content-length must match the body
         const expected = Number(hit.headers.get("content-length") ?? 0);
+        const buf = await readBody(hit);
         if (buf.byteLength > 0 && (!expected || expected === buf.byteLength)) {
           onProgress?.(buf.byteLength, buf.byteLength);
           return { buf, fromCache: true };
         }
-        await cache.delete(url); // corrupt/partial — drop and refetch
+        await evictModel(url); // corrupt/partial — drop and refetch
       }
     } catch { /* fall through to network */ }
   }
 
-  const resp = await fetch(url);
+  const resp = await resumableFetch(url);
   if (!resp.ok) throw new Error(`model fetch failed: ${resp.status} ${url}`);
   const total = Number(resp.headers.get("content-length") ?? 0);
-  const reader = resp.body!.getReader();
-  const chunks: Uint8Array[] = [];
-  let loaded = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-    loaded += value.byteLength;
-    onProgress?.(loaded, total);
-  }
-  const buf = new Uint8Array(loaded);
-  let off = 0;
-  for (const c of chunks) { buf.set(c, off); off += c.byteLength; }
-  chunks.length = 0; // release the duplicate ~model-size of chunk memory before session compile
+  const buf = await readBody(resp, onProgress);
 
   // Only cache a byte-complete download — never a short read that would poison
   // future loads (the bug that can break a tool until the user clears storage).
-  if (cache && loaded > 0 && (!total || total === loaded)) {
-    cache.put(url, new Response(buf.slice(), {
-      headers: { "content-length": String(buf.byteLength), "content-type": "application/octet-stream" },
-    })).catch(() => { /* over quota / private mode — model still works */ });
+  // Awaited: parts are copied out of `buf`, which goes straight to ORT.
+  if (buf.byteLength > 0 && (!total || total === buf.byteLength)) {
+    await modelCache.putBytes(url, buf).catch(() => { /* over quota / private mode — model still works */ });
   }
   return { buf, fromCache: false };
 }

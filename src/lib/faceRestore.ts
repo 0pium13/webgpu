@@ -1,8 +1,10 @@
 "use client";
 
 /**
- * Face restoration — GFPGAN v1.4 (ONNX, 340MB, fetched once from HF and
- * cached by the browser). The exact pipeline the official repo uses:
+ * Face restoration — GFPGAN v1.4 (ONNX, 170MB, fetched once from HF and
+ * cached by the browser). Weights are stored fp16 and cast to fp32 at load
+ * (scripts/gfpgan_fp16_weights.py): half the download, same output — a plain
+ * fp16 conversion overflows to a flat colour. The exact pipeline the official repo uses:
  *
  *   detect landmarks → 5-point similarity alignment to the FFHQ 512
  *   template → GFPGAN on the aligned crop → inverse-warp the restored
@@ -16,7 +18,7 @@
 import { loadOrt, createSession } from "@/lib/ortRuntime";
 import { registerModel } from "@/lib/modelRegistry";
 
-const MODEL_URL = "https://huggingface.co/Meeperomi/GFPGANv1.4-onnx/resolve/main/GFPGANv1.4.onnx";
+const MODEL_URL = "https://huggingface.co/opiumuseless/gfpgan-v1.4-w16/resolve/996691710925f8f44f0896490b8ff3d7a559398a/GFPGANv1.4-w16.onnx";
 const SIZE = 512;
 
 /** FFHQ 512 alignment template (facexlib's face_template): image-left eye,

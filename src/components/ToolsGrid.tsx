@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback } from "react";
-import { UpscaleIcon, RotoscopeIcon, BgRemoveIcon, CubeIcon, CaptionsIcon, EraserIcon, ConvertIcon, ChatIcon, PdfIcon, VoiceIcon, VideocamIcon, CodeIcon } from "./Icons";
+import { UpscaleIcon, RotoscopeIcon, BgRemoveIcon, ExamPhotoIcon, CubeIcon, CaptionsIcon, EraserIcon, ConvertIcon, ChatIcon, PdfIcon, VoiceIcon, VideocamIcon, CodeIcon } from "./Icons";
 import { DEFAULT_CONTENT, type SiteContent } from "@/lib/site-content";
 
 // Structural only — routes, icons and tints stay in code. The name/desc
@@ -11,6 +11,7 @@ const TOOLS = [
   { href: "/upscale", Icon: UpscaleIcon, tint: "#d9b36c" },
   { href: "/rotoscope", Icon: RotoscopeIcon, tint: "#b396c2" },
   { href: "/bg-remove", Icon: BgRemoveIcon, tint: "#85bf9e" },
+  { href: "/exam-photo", Icon: ExamPhotoIcon, tint: "#9da3dc" },
   { href: "/image-to-3d", Icon: CubeIcon, tint: "#d9a441" },
   { href: "/subtitles", Icon: CaptionsIcon, tint: "#8fb5c7" },
   { href: "/erase", Icon: EraserIcon, tint: "#c98b8b" },

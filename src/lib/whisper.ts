@@ -78,6 +78,7 @@ export const LANGUAGES: { code: string; label: string }[] = [
 
 import { toHinglish } from "./hinglish";
 import { tjsDevice } from "./gpuBackend";
+import { configureTransformersCache } from "./modelCache";
 import { registerModel } from "@/lib/modelRegistry";
 
 const SAMPLE_RATE = 16000;
@@ -121,6 +122,7 @@ export async function loadWhisper(tier: ModelKey = "fast", onProgress?: (p: Whis
     const tj: any = await import("@huggingface/transformers");
     const { pipeline, env } = tj;
     env.allowLocalModels = false;
+    configureTransformersCache(env);
     const cb = (p: any) => {
       if (p?.status === "progress" && p.total) {
         onProgress?.({ step: "download", pct: Math.round((p.loaded / p.total) * 100) });

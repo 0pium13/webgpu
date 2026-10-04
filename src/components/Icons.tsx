@@ -263,6 +263,43 @@ export function ConvertIcon(props: IconProps) {
   );
 }
 
+/** Exam photo — a passport portrait snapped inside crop marks */
+export function ExamPhotoIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M3.5 7.5V5a1.5 1.5 0 0 1 1.5-1.5h2.5" />
+      <path d="M20.5 16.5V19a1.5 1.5 0 0 1-1.5 1.5h-2.5" />
+      <rect x="6.75" y="6" width="10.5" height="12.5" rx="1.75" />
+      <circle cx="12" cy="10.75" r="2.25" />
+      <path d="M8.75 18.5c.45-1.85 1.7-2.9 3.25-2.9s2.8 1.05 3.25 2.9" />
+    </Svg>
+  );
+}
+
+/** Signature — a pen stroke looping into a baseline */
+export function SignatureIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M3.5 15.5c2.2-4.6 4.1-8.6 5.6-8.1 1.7.6-1.8 8.4-.2 8.6 1.3.2 2.4-3.6 3.6-3.4 1 .2.3 2.6 1.3 2.8.9.2 1.6-1.4 2.6-1.6" />
+      <path d="M3.5 19.5h17" />
+      <path d="m18 6.5 1.5-1.5a1.4 1.4 0 0 1 2 2L20 8.5" />
+    </Svg>
+  );
+}
+
+/** Thumb impression — concentric ridge arcs */
+export function ThumbprintIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M7.2 5.6A7.5 7.5 0 0 1 19.5 11.5v1.5" />
+      <path d="M4.5 9.5a7.6 7.6 0 0 0-.2 1.8V14" />
+      <path d="M7.5 18.5V11.5a4.5 4.5 0 0 1 9 0v3" />
+      <path d="M12 11.5v4.5a5 5 0 0 1-1.1 3.2" />
+      <path d="M16.5 17.5a9 9 0 0 1-.9 2.6" />
+    </Svg>
+  );
+}
+
 /** Auto subtitles — a caption box with text lines */
 export function CaptionsIcon(props: IconProps) {
   return (

@@ -82,7 +82,7 @@ export default function FaceRestoreProcessor({
         if (p.phase === "detect") setMsg("Finding faces…");
         if (p.phase === "download") {
           setDlPct(p.pct);
-          setMsg(`Loading face model (340MB, one time — cached after)… ${p.pct}%`);
+          setMsg(`Loading face model (170MB, one time — cached after)… ${p.pct}%`);
         }
         if (p.phase === "restore") {
           setDlPct(-1);

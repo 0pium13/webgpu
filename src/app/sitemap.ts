@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 const TOOLS = [
-  "upscale", "rotoscope", "bg-remove", "image-to-3d", "subtitles",
+  "upscale", "rotoscope", "bg-remove", "exam-photo", "image-to-3d", "subtitles",
   "erase", "convert", "pdf", "voice", "webcam", "chat", "code",
 ];
 

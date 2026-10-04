@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState } from "react";
 import Nav from "@/components/Nav";
 import ModelLoader from "@/components/ModelLoader";
+import Markdown from "@/components/chat/Markdown";
 import { ChatIcon, SparkleIcon } from "@/components/Icons";
 import { keepModelsCached } from "@/lib/storage";
 
@@ -301,13 +302,15 @@ export default function ChatPage() {
               {msgs.map((m, i) => (
                 <div key={i} style={{
                   alignSelf: m.role === "user" ? "flex-end" : "flex-start",
-                  maxWidth: "82%",
+                  maxWidth: m.role === "user" ? "82%" : "min(100%, 640px)",
                   background: m.role === "user" ? "var(--accent-dim)" : "var(--surface-2)",
                   border: "0.5px solid var(--border)",
                   borderRadius: m.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-                  padding: "10px 14px", fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap",
+                  padding: "10px 14px", fontSize: 14, lineHeight: 1.6, whiteSpace: m.role === "user" ? "pre-wrap" : "normal",
                 }}>
-                  {m.content || <span style={{ color: "var(--text-dim)" }}>thinking…</span>}
+                  {!m.content ? <span style={{ color: "var(--text-dim)" }}>thinking…</span>
+                    : m.role === "assistant" ? <Markdown text={m.content} streaming={phase === "generating" && i === msgs.length - 1} />
+                    : m.content}
                 </div>
               ))}
             </div>

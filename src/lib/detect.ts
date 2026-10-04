@@ -16,6 +16,7 @@
  */
 
 import { tjsDevice } from "./gpuBackend";
+import { configureTransformersCache } from "./modelCache";
 import { registerModel } from "@/lib/modelRegistry";
 import { rawImageFromCanvas } from "@/lib/sam2";
 
@@ -45,6 +46,7 @@ export async function loadDetector(onProgress?: (p: any) => void): Promise<any> 
   detectorPromise = (async () => {
     const { pipeline, env } = await getTJ();
     env.allowLocalModels = false;
+    configureTransformersCache(env);
     const want = await tjsDevice(); // Safari <26 / unknown WebKit → wasm
     try {
       const det = await pipeline("object-detection", DETECT_MODEL, {

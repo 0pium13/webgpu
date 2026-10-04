@@ -14,6 +14,7 @@
  */
 
 import { tjsDevice } from "./gpuBackend";
+import { configureTransformersCache } from "./modelCache";
 import { registerModel } from "@/lib/modelRegistry";
 
 const MODEL_ID = "onnx-community/sam2.1-hiera-tiny-ONNX";
@@ -74,6 +75,7 @@ export async function loadSAM(onProgress?: (p: any) => void, which: SegModel = "
     const { AutoProcessor, Tensor, RawImage, env } = tj;
     const Cls = tj[cfg.cls];
     env.allowLocalModels = false;
+    configureTransformersCache(env);
 
     let model;
     const want = await tjsDevice(); // Safari <26 / unknown WebKit → wasm
