@@ -11,9 +11,12 @@ const LINKS = [
   { href: "/exam-photo", label: "Exam" },
   { href: "/image-to-3d", label: "3D" },
   { href: "/subtitles", label: "Subs" },
+  { href: "/noise-remover", label: "Noise" },
+  { href: "/vocal-remover", label: "Vocals" },
   { href: "/erase", label: "Erase" },
   { href: "/convert", label: "Convert" },
   { href: "/pdf", label: "PDF" },
+  { href: "/ocr", label: "OCR" },
   { href: "/voice", label: "Voice" },
   { href: "/webcam", label: "Cam" },
   { href: "/chat", label: "Chat" },
@@ -28,9 +31,12 @@ const MENU = [
   { href: "/exam-photo", name: "Exam Photo Resizer", tint: "#9da3dc" },
   { href: "/image-to-3d", name: "Image to 3D", tint: "#d9a441" },
   { href: "/subtitles", name: "Auto Subtitles", tint: "#8fb5c7" },
+  { href: "/noise-remover", name: "Noise Remover", tint: "#86a6d6" },
+  { href: "/vocal-remover", name: "Vocal Remover", tint: "#d18fa8" },
   { href: "/erase", name: "Magic Eraser", tint: "#c98b8b" },
   { href: "/convert", name: "Converter", tint: "#a9b87e" },
   { href: "/pdf", name: "PDF Studio", tint: "#c9826b" },
+  { href: "/ocr", name: "Image to Text", tint: "#c7a97e" },
   { href: "/voice", name: "Voice Studio", tint: "#c39bbb" },
   { href: "/webcam", name: "Webcam Studio", tint: "#85b8ae" },
   { href: "/chat", name: "Local AI Chat", tint: "#92a9c9" },
@@ -70,7 +76,7 @@ export default function Nav() {
         </Link>
 
         {/* Desktop: the full link row. */}
-        <div className="hidden items-center gap-1 md:flex">
+        <div className="hidden items-center gap-1 min-[1180px]:flex">
           {LINKS.map((l) => {
             const active = pathname === l.href;
             return (
@@ -95,7 +101,7 @@ export default function Nav() {
           aria-label={open ? "Close tools menu" : "Open tools menu"}
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
-          className="relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors duration-200 hover:bg-white/[0.05] md:hidden"
+          className="relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors duration-200 hover:bg-white/[0.05] min-[1180px]:hidden"
         >
           <span
             className="absolute h-px w-[18px] bg-fg transition-all duration-300 ease-[var(--ease-lux)]"
@@ -115,7 +121,7 @@ export default function Nav() {
       {/* Mobile menu overlay. Stays mounted so open/close both animate. */}
       <div
         aria-hidden={!open}
-        className={`fixed inset-x-0 bottom-0 top-14 z-90 overflow-y-auto bg-canvas/95 backdrop-blur-2xl transition-opacity duration-300 ease-[var(--ease-lux)] md:hidden ${
+        className={`fixed inset-x-0 bottom-0 top-14 z-90 overflow-y-auto bg-canvas/95 backdrop-blur-2xl transition-opacity duration-300 ease-[var(--ease-lux)] min-[1180px]:hidden ${
           open ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
       >

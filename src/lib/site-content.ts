@@ -23,8 +23,8 @@ export type SiteContent = {
 };
 
 export const TOOL_ORDER = [
-  "/upscale", "/rotoscope", "/bg-remove", "/exam-photo", "/image-to-3d", "/subtitles",
-  "/erase", "/convert", "/pdf", "/voice", "/webcam", "/chat", "/code",
+  "/upscale", "/rotoscope", "/bg-remove", "/exam-photo", "/image-to-3d", "/subtitles", "/noise-remover", "/vocal-remover",
+  "/erase", "/convert", "/pdf", "/ocr", "/voice", "/webcam", "/chat", "/code",
 ] as const;
 
 export const DEFAULT_CONTENT: SiteContent = {
@@ -40,9 +40,12 @@ export const DEFAULT_CONTENT: SiteContent = {
     "/exam-photo": { name: "Exam Photo Resizer", desc: "UPSC, SSC, IBPS photo + signature. Exact px, exact KB." },
     "/image-to-3d": { name: "Image to 3D", desc: "One photo becomes a real 3D model. Export GLB, OBJ, STL." },
     "/subtitles": { name: "Auto Subtitles", desc: "Hinglish captions + 27 languages. Live, on your GPU." },
+    "/noise-remover": { name: "Noise Remover", desc: "Fan, AC, traffic hum gone. Clean voice, audio or video." },
+    "/vocal-remover": { name: "Vocal Remover", desc: "Karaoke tracks + 4-stem split. HTDemucs on your GPU." },
     "/erase": { name: "Magic Eraser", desc: "Paint over anything. AI rebuilds what was behind it." },
     "/convert": { name: "Converter", desc: "MP4, MP3, GIF, compress. No upload sites, no ads." },
     "/pdf": { name: "PDF Studio", desc: "Merge, split, compress, convert. Your contract stays here." },
+    "/ocr": { name: "Image to Text", desc: "Hindi + English OCR from photos, scans and PDFs. Nothing uploaded." },
     "/voice": { name: "Voice Studio", desc: "Studio TTS in English, Hindi + more. No credits, ever." },
     "/webcam": { name: "Webcam Studio", desc: "Enhance + retouch + auto-frame your live cam. Real time." },
     "/chat": { name: "Local AI Chat", desc: "A real LLM on your GPU. Works offline, keeps secrets." },

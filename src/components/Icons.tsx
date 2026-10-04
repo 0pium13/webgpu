@@ -309,3 +309,44 @@ export function CaptionsIcon(props: IconProps) {
     </Svg>
   );
 }
+
+/** Noise remover — a clean voice waveform on a flat floor, the noise dissolving off it */
+export function NoiseRemoverIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M2.5 12h2.5M19 12h2.5" />
+      <path d="M7.5 10.5v3M10 8v8M12.5 5.5v13M15 8.5v7M17.5 10.75v2.5" />
+      <circle cx="4.2" cy="7.6" r="0.8" fill="currentColor" stroke="none" />
+      <circle cx="2.9" cy="4.9" r="0.6" fill="currentColor" stroke="none" opacity="0.6" />
+      <circle cx="6.1" cy="4.1" r="0.5" fill="currentColor" stroke="none" opacity="0.4" />
+    </Svg>
+  );
+}
+
+/** Vocal remover — one waveform forking into separate stems */
+export function VocalRemoverIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M2.5 11v2M5 8.5v7M7.5 10v4" />
+      <path d="M10 12c2.6 0 3.2-5.5 6.2-5.5h5.3" />
+      <path d="M10 12h11.5" />
+      <path d="M10 12c2.6 0 3.2 5.5 6.2 5.5h5.3" />
+    </Svg>
+  );
+}
+
+/** Image to text — a viewfinder reading a Devanagari word (headline + hanging stems) above a Latin line */
+export function OcrIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 8.5V6a2 2 0 0 1 2-2h2.5" />
+      <path d="M15.5 4H18a2 2 0 0 1 2 2v2.5" />
+      <path d="M20 15.5V18a2 2 0 0 1-2 2h-2.5" />
+      <path d="M8.5 20H6a2 2 0 0 1-2-2v-2.5" />
+      <path d="M7.5 9h9" />
+      <path d="M10.25 9v3.75" />
+      <path d="M13.75 9v2.5" />
+      <path d="M7.5 15.75h6" />
+    </Svg>
+  );
+}

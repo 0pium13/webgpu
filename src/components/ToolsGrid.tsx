@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback } from "react";
-import { UpscaleIcon, RotoscopeIcon, BgRemoveIcon, ExamPhotoIcon, CubeIcon, CaptionsIcon, EraserIcon, ConvertIcon, ChatIcon, PdfIcon, VoiceIcon, VideocamIcon, CodeIcon } from "./Icons";
+import { UpscaleIcon, RotoscopeIcon, BgRemoveIcon, ExamPhotoIcon, CubeIcon, CaptionsIcon, EraserIcon, ConvertIcon, ChatIcon, PdfIcon, VoiceIcon, VideocamIcon, CodeIcon, NoiseRemoverIcon, VocalRemoverIcon, OcrIcon } from "./Icons";
 import { DEFAULT_CONTENT, type SiteContent } from "@/lib/site-content";
 
 // Structural only — routes, icons and tints stay in code. The name/desc
@@ -14,9 +14,12 @@ const TOOLS = [
   { href: "/exam-photo", Icon: ExamPhotoIcon, tint: "#9da3dc" },
   { href: "/image-to-3d", Icon: CubeIcon, tint: "#d9a441" },
   { href: "/subtitles", Icon: CaptionsIcon, tint: "#8fb5c7" },
+  { href: "/noise-remover", Icon: NoiseRemoverIcon, tint: "#86a6d6" },
+  { href: "/vocal-remover", Icon: VocalRemoverIcon, tint: "#d18fa8" },
   { href: "/erase", Icon: EraserIcon, tint: "#c98b8b" },
   { href: "/convert", Icon: ConvertIcon, tint: "#a9b87e" },
   { href: "/pdf", Icon: PdfIcon, tint: "#c9826b" },
+  { href: "/ocr", Icon: OcrIcon, tint: "#c7a97e" },
   { href: "/voice", Icon: VoiceIcon, tint: "#c39bbb" },
   { href: "/webcam", Icon: VideocamIcon, tint: "#85b8ae" },
   { href: "/chat", Icon: ChatIcon, tint: "#92a9c9" },

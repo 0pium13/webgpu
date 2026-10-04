@@ -37,7 +37,7 @@ export const TOOL_META: Record<string, ToolMeta> = {
       "subtitles without uploading", "whisper subtitles online",
     ],
     appName: "Auto Subtitles — free subtitle generator",
-    related: ["convert", "voice", "upscale"],
+    related: ["convert", "voice", "upscale", "noise-remover"],
     faqs: [
       {
         q: "Is this subtitle generator really free?",
@@ -110,7 +110,7 @@ export const TOOL_META: Record<string, ToolMeta> = {
       "फोटो को 50 kb में कैसे करें", "सिग्नेचर का साइज कम करें",
     ],
     appName: "Exam Photo Resizer — exam photo & signature tool",
-    related: ["bg-remove", "pdf", "upscale"],
+    related: ["bg-remove", "pdf", "upscale", "ocr"],
     faqs: [
       {
         q: "What photo and signature size do UPSC, SSC and IBPS ask for?",
@@ -212,7 +212,7 @@ export const TOOL_META: Record<string, ToolMeta> = {
       "video converter no upload", "convert video without watermark",
     ],
     appName: "Converter — free video & audio converter",
-    related: ["subtitles", "upscale", "pdf"],
+    related: ["subtitles", "upscale", "pdf", "noise-remover", "vocal-remover"],
     faqs: [
       {
         q: "Why is a no-upload converter better?",
@@ -302,7 +302,7 @@ export const TOOL_META: Record<string, ToolMeta> = {
       "split pdf", "edit pdf text free", "private pdf tools",
     ],
     appName: "PDF Studio — free private PDF editor",
-    related: ["convert", "exam-photo"],
+    related: ["convert", "exam-photo", "ocr"],
     faqs: [
       {
         q: "Why does it matter that PDFs aren't uploaded?",
@@ -332,7 +332,7 @@ export const TOOL_META: Record<string, ToolMeta> = {
       "tts no character limit", "voiceover generator free",
     ],
     appName: "Voice Studio — free AI text to speech",
-    related: ["subtitles", "chat"],
+    related: ["subtitles", "chat", "vocal-remover"],
     faqs: [
       {
         q: "Is there a character or word limit?",
@@ -436,6 +436,72 @@ export const TOOL_META: Record<string, ToolMeta> = {
         q: "Who owns the code it writes?",
         a: "You do, fully. Copy it out and use it anywhere — no license strings, no watermark comments.",
       },
+    ],
+  },
+  "noise-remover": {
+    slug: "noise-remover",
+    title: "Free Background Noise Remover — Clean Voice in Audio & Video",
+    description:
+      "Remove background noise from audio and video free: fan, AC hum, traffic, hiss and music behind your voice. AI runs in your browser, so nothing is uploaded. No watermark, no signup. Download clean WAV or the same video with clean audio.",
+    keywords: [
+      "remove background noise from audio", "noise remover", "audio cleaner",
+      "remove noise from video", "voice clarity", "remove fan noise from video",
+      "background noise remover free", "awaaz saaf kare", "video ki awaaz saaf kare",
+      "noise reduction online no upload",
+    ],
+    appName: "Noise Remover — free AI background noise removal",
+    related: ["subtitles", "convert", "voice", "vocal-remover"],
+    faqs: [
+      { q: "What noise can it remove?", a: "Steady background sound behind a voice: ceiling fans, AC and cooler hum, traffic, mains hum, hiss, room rumble and background music. It's built for phone recordings made at home, outdoors or in a car." },
+      { q: "Can it remove other people talking?", a: "No. It separates speech from noise, not one voice from another, so a crowd or someone talking next to you will mostly stay in. For that you need a quieter take." },
+      { q: "Is my recording uploaded anywhere?", a: "No. The AI model (DeepFilterNet3, about 9MB) downloads once and runs inside your browser on your own CPU. Your audio and video never leave your device." },
+      { q: "Does it work on video?", a: "Yes. Drop an MP4, MOV or WebM and you can download the same video with clean audio. The picture is copied as-is, never re-encoded, so there's no quality loss. You can also download just the clean audio as WAV." },
+      { q: "Will my voice sound robotic?", a: "Pick the strength: Light keeps some room tone, Medium sounds natural on most voices, Strong handles loud fans and traffic, and Max removes everything but the voice. The Original/Cleaned switch lets you compare instantly while it plays." },
+      { q: "How long can the file be, and does it work on phones?", a: "Up to 30 minutes per file. It runs on any modern phone or laptop, no GPU needed. A 30-second clip takes about a second on a laptop, a 5-minute file a few seconds." },
+      { q: "Awaaz saaf karne ka free tool hai?", a: "Haan. Video ya audio daalo, fan, AC, traffic ka shor hat jaata hai aur awaaz saaf ho jaati hai. Bilkul free, koi watermark nahi, file upload nahi hoti." },
+    ],
+  },
+  "vocal-remover": {
+    slug: "vocal-remover",
+    title: "Free Vocal Remover & Karaoke Maker — Split Stems, No Upload",
+    description:
+      "Remove vocals from any song free — make karaoke tracks, acapellas and instrumentals, or split into vocals, drums, bass and other stems. HTDemucs AI runs in your browser, nothing is uploaded. WAV download, no watermark.",
+    keywords: [
+      "vocal remover", "remove vocals from song", "karaoke maker", "instrumental maker",
+      "stem splitter", "acapella extractor", "vocal remover free online", "split song into stems",
+      "gaane se awaaz hataye", "song se voice kaise hataye", "karaoke track kaise banaye", "remove vocals without uploading",
+    ],
+    appName: "Vocal Remover — free karaoke & stem splitter",
+    related: ["noise-remover", "subtitles", "convert", "voice"],
+    faqs: [
+      { q: "Is this vocal remover really free?", a: "Yes — no watermark, no per-song credits, no signup. The AI runs on your own GPU, so there is no server bill to pass on. Every stem downloads as a full-quality WAV." },
+      { q: "Is my song uploaded anywhere?", a: "No. HTDemucs (by Meta AI Research) downloads once into your browser and separates the audio on your device. Your file never leaves your computer or phone." },
+      { q: "How do I make a karaoke track from a Bollywood song?", a: "Drop the MP3 or video, keep \"Remove vocals\" selected and press the button. You get an instrumental (karaoke) track and a clean vocal track — gaane se awaaz hatane ka sabse aasaan tareeka. Use the instrumental for covers, Reels and riyaz." },
+      { q: "What are 4 stems?", a: "The song split into vocals, drums, bass and everything else (guitars, keys, strings). Mute or solo any of them in the built-in mixer, then download each as a WAV or all of them as a ZIP — great for remixes, practice and sampling." },
+      { q: "Can I use a video file?", a: "Yes. MP4, MOV and WebM videos work — the audio is pulled out in your browser. MP3, WAV, M4A, FLAC and OGG work too." },
+      { q: "How good is it, and how long does it take?", a: "It uses HTDemucs v4, the open model studios benchmark against. On a recent laptop GPU a 4-minute song takes well under a minute; without WebGPU it runs on the CPU at roughly twice the song's length. Very dense mixes can keep a little reverb or backing harmony." },
+      { q: "Can I use the separated tracks commercially?", a: "The separation software (Demucs by Meta AI Research) is MIT-licensed, but the song itself keeps its original copyright. Only use stems of music you own or have permission to use." },
+    ],
+  },
+  ocr: {
+    slug: "ocr",
+    title: "Image to Text (OCR) — Hindi + English, Free, No Upload",
+    description:
+      "Extract text from photos, screenshots, scanned pages and PDFs free — Hindi and English, even mixed in one line. Runs in your browser on your GPU, nothing uploaded. Edit, copy or download .txt.",
+    keywords: [
+      "image to text", "hindi ocr", "photo se text nikale", "jpg to text",
+      "image to text converter", "hindi image to text", "ocr online free", "extract text from image",
+      "screenshot to text", "scanned pdf to text", "pdf to text hindi", "फोटो से टेक्स्ट निकालें", "हिंदी ocr",
+    ],
+    appName: "Image to Text — free Hindi + English OCR",
+    related: ["pdf", "exam-photo", "subtitles"],
+    faqs: [
+      { q: "Can it read Hindi and English in the same image?", a: "Yes. One model reads Devanagari and English letters, digits and the ₹ sign together, so mixed lines like \"कुल राशि ₹12,500\" or \"PAN card की प्रति\" come out right. Marathi, Nepali and Sanskrit printed in Devanagari work too." },
+      { q: "Are my photos or documents uploaded?", a: "No. The OCR model downloads once (about 13 MB) and runs inside your browser on your GPU, or CPU if there is no GPU. Bills, ID cards and letters never leave your device." },
+      { q: "How accurate is it?", a: "On clean printed Hindi it gets more than 99% of characters right, and a full A4 page takes under a second on most GPUs. For phone photos, keep the page flat and well lit. Boxes marked in amber were read with low confidence and are worth a quick check." },
+      { q: "Does it work on handwriting?", a: "Not yet. It is trained on printed text: books, notices, bills, screenshots, forms. Handwritten notes usually come out garbled." },
+      { q: "Can I convert a scanned PDF to text?", a: "Yes. Drop a PDF and each page is rendered and read in turn (up to 30 pages at a time), with a thumbnail strip to check each one. Copy a page, copy everything, or download all the pages as one .txt file." },
+      { q: "Is there a limit or a watermark?", a: "No limits, no signup, no watermark. It runs on your own device, so there is no per-page cost for us to charge you." },
     ],
   },
 };

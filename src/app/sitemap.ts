@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
 
 const TOOLS = [
-  "upscale", "rotoscope", "bg-remove", "exam-photo", "image-to-3d", "subtitles",
-  "erase", "convert", "pdf", "voice", "webcam", "chat", "code",
+  "upscale", "rotoscope", "bg-remove", "exam-photo", "image-to-3d", "subtitles", "noise-remover", "vocal-remover",
+  "erase", "convert", "pdf", "ocr", "voice", "webcam", "chat", "code",
 ];
 
 const LANDING = ["free-ai-video-tools", "hinglish-subtitles", "no-watermark"];
