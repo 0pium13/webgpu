@@ -35,8 +35,8 @@ export default function VocalRemoverPage() {
           </h1>
           <p style={{ fontSize: 16, color: "var(--text-muted)", maxWidth: 580, lineHeight: 1.6 }}>
             Turn any song into a karaoke track, or split it into vocals, drums, bass
-            and the rest. Meta&apos;s HTDemucs runs on your GPU —
-            <span style={{ color: "var(--text)" }}> studio-grade separation, no upload, no watermark.</span>{" "}
+            and the rest. Spleeter by Deezer runs on your GPU —
+            <span style={{ color: "var(--text)" }}> a full song in seconds, no upload, no watermark.</span>{" "}
             Gaane se awaaz hatao for covers, reels and riyaz.
           </p>
         </div>
@@ -46,7 +46,7 @@ export default function VocalRemoverPage() {
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: gpu.scanning ? "var(--text-dim)" : gpu.supported ? TIER_COLOR[gpu.tier] : "var(--amber)", flexShrink: 0 }} />
             <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
               {gpu.scanning ? "Detecting your GPU…" : (
-                <>Separates on <span className="mono" style={{ color: "var(--text)" }}>{gpu.supported ? "your GPU (WebGPU)" : "CPU (slower)"}</span> · {MODEL_SIZE} model downloads once, cached after</>
+                <>Separates on <span className="mono" style={{ color: "var(--text)" }}>{gpu.supported ? "your GPU (WebGPU)" : "your CPU"}</span> · {MODEL_SIZE.karaoke} model ({MODEL_SIZE.four} for 4 stems) downloads once, cached after</>
               )}
             </p>
           </div>

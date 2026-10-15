@@ -29,7 +29,7 @@ export function probeDuration(file: File): Promise<number | null> {
 }
 
 async function decodeBytes(bytes: ArrayBuffer): Promise<AudioBuffer> {
-  // decodeAudioData resamples to the context rate — 44.1kHz is what HTDemucs was trained on
+  // decodeAudioData resamples to the context rate — 44.1kHz is what Spleeter was trained on
   return new OfflineAudioContext(2, 1, SAMPLE_RATE).decodeAudioData(bytes);
 }
 

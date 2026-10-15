@@ -22,10 +22,10 @@ const MODES: { id: StemMode; title: string; sub: string }[] = [
 ];
 
 const LOADER_FACTS = [
-  "HTDemucs by Meta AI Research — the model the pros benchmark against",
+  "Spleeter by Deezer — open source, free to use any way you want",
   "Downloads once, cached forever. Next song: instant",
   "Your song never leaves this tab — no upload, no server",
-  "Hybrid model: it listens to the waveform and the spectrogram at once",
+  "One small neural net per stem — together they share out every frequency",
 ];
 
 export default function StemStudio({ file, gpuOk, onReset }: { file: File; gpuOk: boolean; onReset: () => void }) {
@@ -226,7 +226,7 @@ export default function StemStudio({ file, gpuOk, onReset }: { file: File; gpuOk
             )}
             {!gpuOk && (
               <p style={note}>
-                No WebGPU here, so this runs on your CPU — expect roughly twice the song&apos;s length (a 4-minute song ≈ 7 minutes). Chrome or Edge on a laptop is about 10× faster.
+                No WebGPU here, so this runs on your CPU — still quick: a 4-minute song takes about 25 seconds (40 for 4 stems). Chrome or Edge on a laptop is 4–5× faster.
               </p>
             )}
 
@@ -239,7 +239,7 @@ export default function StemStudio({ file, gpuOk, onReset }: { file: File; gpuOk
                 <SparkleIcon size={17} /> {mode === "karaoke" ? "Remove vocals" : "Split into 4 stems"}
               </button>
               <p className="mono" style={{ fontSize: 11.5, color: "var(--text-muted)", textAlign: "center" }}>
-                HTDemucs v4 · {MODEL_SIZE} once, then cached · {gpuOk ? "runs on your GPU" : "runs on your CPU"}
+                Spleeter by Deezer · {MODEL_SIZE[mode]} once, then cached · {gpuOk ? "runs on your GPU" : "runs on your CPU"}
               </p>
             </div>
           </div>
@@ -250,8 +250,8 @@ export default function StemStudio({ file, gpuOk, onReset }: { file: File; gpuOk
             <div style={{ alignSelf: "stretch" }}>
               <ModelLoader
                 pct={loadPct}
-                title="HTDemucs is waking up"
-                sub={`${MODEL_SIZE} · downloads once, cached forever`}
+                title="Spleeter is waking up"
+                sub={`${MODEL_SIZE[mode]} · downloads once, cached forever`}
                 facts={LOADER_FACTS}
               />
             </div>

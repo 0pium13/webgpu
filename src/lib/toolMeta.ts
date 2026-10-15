@@ -465,22 +465,22 @@ export const TOOL_META: Record<string, ToolMeta> = {
     slug: "vocal-remover",
     title: "Free Vocal Remover & Karaoke Maker — Split Stems, No Upload",
     description:
-      "Remove vocals from any song free — make karaoke tracks, acapellas and instrumentals, or split into vocals, drums, bass and other stems. HTDemucs AI runs in your browser, nothing is uploaded. WAV download, no watermark.",
+      "Remove vocals from any song free — make karaoke tracks, acapellas and instrumentals, or split into vocals, drums, bass and other stems. Spleeter by Deezer runs in your browser, nothing is uploaded. WAV download, no watermark.",
     keywords: [
       "vocal remover", "remove vocals from song", "karaoke maker", "instrumental maker",
       "stem splitter", "acapella extractor", "vocal remover free online", "split song into stems",
-      "gaane se awaaz hataye", "song se voice kaise hataye", "karaoke track kaise banaye", "remove vocals without uploading",
+      "spleeter online", "gaane se awaaz hataye", "song se voice kaise hataye", "karaoke track kaise banaye", "remove vocals without uploading",
     ],
     appName: "Vocal Remover — free karaoke & stem splitter",
     related: ["noise-remover", "subtitles", "convert", "voice"],
     faqs: [
-      { q: "Is this vocal remover really free?", a: "Yes — no watermark, no per-song credits, no signup. The AI runs on your own GPU, so there is no server bill to pass on. Every stem downloads as a full-quality WAV." },
-      { q: "Is my song uploaded anywhere?", a: "No. HTDemucs (by Meta AI Research) downloads once into your browser and separates the audio on your device. Your file never leaves your computer or phone." },
+      { q: "Is this vocal remover really free?", a: "Yes — no watermark, no per-song credits, no signup. The AI runs on your own device, so there is no server bill to pass on. Every stem downloads as a full-quality WAV." },
+      { q: "Is my song uploaded anywhere?", a: "No. Spleeter by Deezer downloads once into your browser (39MB, or 79MB for 4 stems) and separates the audio on your device. Your file never leaves your computer or phone." },
       { q: "How do I make a karaoke track from a Bollywood song?", a: "Drop the MP3 or video, keep \"Remove vocals\" selected and press the button. You get an instrumental (karaoke) track and a clean vocal track — gaane se awaaz hatane ka sabse aasaan tareeka. Use the instrumental for covers, Reels and riyaz." },
       { q: "What are 4 stems?", a: "The song split into vocals, drums, bass and everything else (guitars, keys, strings). Mute or solo any of them in the built-in mixer, then download each as a WAV or all of them as a ZIP — great for remixes, practice and sampling." },
       { q: "Can I use a video file?", a: "Yes. MP4, MOV and WebM videos work — the audio is pulled out in your browser. MP3, WAV, M4A, FLAC and OGG work too." },
-      { q: "How good is it, and how long does it take?", a: "It uses HTDemucs v4, the open model studios benchmark against. On a recent laptop GPU a 4-minute song takes well under a minute; without WebGPU it runs on the CPU at roughly twice the song's length. Very dense mixes can keep a little reverb or backing harmony." },
-      { q: "Can I use the separated tracks commercially?", a: "The separation software (Demucs by Meta AI Research) is MIT-licensed, but the song itself keeps its original copyright. Only use stems of music you own or have permission to use." },
+      { q: "How fast is it?", a: "Very. On a laptop GPU a 4-minute song separates in about 5 seconds (4 stems in about 7); on a CPU-only browser it takes about 25 seconds. The first run also downloads the model once. Very dense mixes can keep a little reverb or backing vocals in the instrumental." },
+      { q: "Can I use the separated tracks commercially?", a: "Deezer Research released Spleeter's code and pre-trained models under the MIT license, so the tool itself adds no restrictions. The song keeps its original copyright, so only use stems of music you own or have permission to use." },
     ],
   },
   ocr: {

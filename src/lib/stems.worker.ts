@@ -1,5 +1,5 @@
 /**
- * Stem separation off the main thread: HTDemucs loading, inference and the
+ * Stem separation off the main thread: Spleeter loading, inference and the
  * JS STFT/iSTFT all run here. Finished audio streams back per chunk (buffers
  * transferred, zero-copy) so the page can draw stems as they appear.
  */
