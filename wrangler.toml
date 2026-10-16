@@ -1,0 +1,11 @@
+# Cloudflare Pages project. Build with `npm run build` (static export → out/);
+# /functions are deployed alongside as Pages Functions.
+name = "webgpu"
+pages_build_output_dir = "out"
+compatibility_date = "2026-10-01"
+
+# Admin-edited homepage copy + login throttling. Create with
+# `npx wrangler kv namespace create CONTENT` and paste its id here.
+[[kv_namespaces]]
+binding = "CONTENT"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"

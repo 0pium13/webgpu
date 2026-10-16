@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 
+export const dynamic = "force-static";
+
 const TOOLS = [
   "upscale", "rotoscope", "bg-remove", "exam-photo", "image-to-3d", "subtitles", "noise-remover", "vocal-remover",
   "erase", "convert", "pdf", "ocr", "voice", "webcam", "chat", "code",

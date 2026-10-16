@@ -2,9 +2,9 @@ import { ImageResponse } from "next/og";
 import { TOOL_META } from "@/lib/toolMeta";
 
 /**
- * Branded 1200x630 share cards for every page, drawn on the fly and
- * cached hard. One route instead of sixteen opengraph-image files —
- * /og/subtitles, /og/home, /og/hinglish-subtitles, etc.
+ * Branded 1200x630 share cards for every page, drawn once at build time
+ * (static export) — /og/subtitles.png, /og/home.png, etc. One route instead
+ * of an opengraph-image file per page.
  */
 
 /** Slugs that aren't tools. Title splits into [line1, accent line2]. */
@@ -41,12 +41,18 @@ function cardCopy(slug: string) {
   return { top, accent: accent ?? "", tag: t.description.split(".")[0] + "." };
 }
 
+export const dynamic = "force-static";
+
+export function generateStaticParams() {
+  return [...Object.keys(EXTRA), ...Object.keys(TOOL_META)].map((slug) => ({ slug: `${slug}.png` }));
+}
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
-  const copy = cardCopy(slug);
+  const copy = cardCopy(slug.replace(/\.png$/, ""));
   if (!copy) return new Response("Not found", { status: 404 });
 
   return new ImageResponse(
@@ -154,9 +160,6 @@ export async function GET(
     {
       width: 1200,
       height: 630,
-      headers: {
-        "cache-control": "public, max-age=86400, s-maxage=604800",
-      },
     },
   );
 }

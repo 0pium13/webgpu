@@ -42,3 +42,7 @@ next-env.d.ts
 
 # admin local content store (dev fallback)
 .content.local.json
+
+# cloudflare
+.wrangler
+.dev.vars

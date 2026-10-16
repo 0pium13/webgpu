@@ -13,8 +13,8 @@ export const metadata: Metadata = {
   title: TITLE,
   description: DESC,
   alternates: { canonical: "/hinglish-subtitles" },
-  openGraph: { title: TITLE, description: DESC, url: "/hinglish-subtitles", siteName: "WebGPU.in", type: "website", images: [{ url: "/og/hinglish-subtitles", width: 1200, height: 630 }] },
-  twitter: { card: "summary_large_image", title: TITLE, description: DESC, images: ["/og/hinglish-subtitles"] },
+  openGraph: { title: TITLE, description: DESC, url: "/hinglish-subtitles", siteName: "WebGPU.in", type: "website", images: [{ url: "/og/hinglish-subtitles.png", width: 1200, height: 630 }] },
+  twitter: { card: "summary_large_image", title: TITLE, description: DESC, images: ["/og/hinglish-subtitles.png"] },
 };
 
 const FAQS: ToolFaq[] = [

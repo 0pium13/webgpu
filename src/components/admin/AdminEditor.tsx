@@ -110,8 +110,8 @@ export default function AdminEditor({
           border: "1px solid rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.08)",
           fontSize: 13, lineHeight: 1.6, color: "var(--amber)",
         }}>
-          No cloud store connected — edits save locally only and won&rsquo;t persist
-          on the live site. Add a Vercel KV store to enable saving in production.
+          No content store connected, so saving is off. Bind a Cloudflare KV
+          namespace as CONTENT in the Pages project to enable it.
         </p>
       )}
 

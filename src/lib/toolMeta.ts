@@ -520,13 +520,13 @@ export function toolMetadata(slug: string): Metadata {
       url: `/${t.slug}`,
       siteName: "WebGPU.in",
       type: "website",
-      images: [{ url: `/og/${t.slug}`, width: 1200, height: 630 }],
+      images: [{ url: `/og/${t.slug}.png`, width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       title: t.title,
       description: t.description,
-      images: [`/og/${t.slug}`],
+      images: [`/og/${t.slug}.png`],
     },
   };
 }

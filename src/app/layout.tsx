@@ -25,13 +25,13 @@ export const metadata: Metadata = {
     url: "https://webgpu.in",
     siteName: "WebGPU.in",
     type: "website",
-    images: [{ url: "/og/home", width: 1200, height: 630 }],
+    images: [{ url: "/og/home.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "WebGPU.in",
     description: "Free AI tools that run entirely on your GPU. No upload, no watermark.",
-    images: ["/og/home"],
+    images: ["/og/home.png"],
   },
 };
 

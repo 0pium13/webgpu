@@ -49,7 +49,7 @@ export default function AdminLogin({ configured }: { configured: boolean }) {
         <p style={{ margin: "0 0 22px", fontSize: 13.5, lineHeight: 1.6, color: "var(--text-secondary)" }}>
           {configured
             ? "Enter your admin password to edit the site."
-            : "Admin isn't configured yet — set the ADMIN_PASSWORD environment variable in Vercel, then redeploy."}
+            : "Admin isn't configured yet — set the ADMIN_PASSWORD secret in the Cloudflare Pages project, then redeploy."}
         </p>
 
         <input

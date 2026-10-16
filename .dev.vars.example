@@ -1,0 +1,4 @@
+# Local secrets for `npx wrangler pages dev out` (copy to .dev.vars).
+# In production set these as Pages secrets: npx wrangler pages secret put <NAME> --project-name webgpu
+ADMIN_PASSWORD=choose-a-local-test-password
+ADMIN_SESSION_SECRET=any-long-random-string

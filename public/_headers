@@ -1,0 +1,20 @@
+# Security headers for every response (Cloudflare Pages). See next.config.ts.
+# CSP notes:
+#  - 'unsafe-inline'/'unsafe-eval': Next.js inline runtime; 'wasm-unsafe-eval' lets ORT, ffmpeg and WebLLM compile wasm
+#  - img-src https: Vibe Coder preview iframes (srcdoc inherits this CSP) may reference external images
+#  - connect-src openrouter.ai / api.elevenlabs.io: BYOK calls straight from the user's browser with their own key
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https:; media-src 'self' blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' blob: data: https://huggingface.co https://*.huggingface.co https://*.hf.co https://cdn.jsdelivr.net https://unpkg.com https://raw.githubusercontent.com https://openrouter.ai https://api.elevenlabs.io; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Cross-Origin-Opener-Policy: same-origin
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(self), microphone=(self), geolocation=(), payment=()
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  X-DNS-Prefetch-Control: on
+
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/og/*
+  Cache-Control: public, max-age=86400
