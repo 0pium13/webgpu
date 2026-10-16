@@ -15,12 +15,19 @@ const nextConfig: NextConfig = {
   output: "export",
   // transformers.js / onnxruntime-web ship server-only fallbacks we don't bundle
   serverExternalPackages: ["@huggingface/transformers"],
-  // outetts has a dead `await import("fs")` branch for Node — stub it out so
-  // Turbopack can bundle the browser path
+  // Some browser-safe deps keep a dead `await import("fs")` Node branch — stub
+  // it out for both bundlers (dev runs Turbopack, production builds webpack).
   turbopack: {
     resolveAlias: {
       fs: { browser: "./src/lib/empty.ts" },
     },
+  },
+  webpack: (config, { isServer }) => {
+    if (!isServer) config.resolve.fallback = { ...config.resolve.fallback, fs: false };
+    // transformers.js / kokoro-js also reference their Node backends (native
+    // .node binaries); the site only ever runs the browser builds
+    config.resolve.alias = { ...config.resolve.alias, "onnxruntime-node$": false, "sharp$": false };
+    return config;
   },
   // Note: we deliberately do NOT set COEP (require-corp): the single-threaded
   // ffmpeg core needs no cross-origin isolation, and COEP would block the
