@@ -5,7 +5,7 @@ pages_build_output_dir = "out"
 compatibility_date = "2026-10-01"
 
 # Admin-edited homepage copy + login throttling. Create with
-# `npx wrangler kv namespace create CONTENT` and paste its id here.
+# `npx wrangler kv namespace create CONTENT`.
 [[kv_namespaces]]
 binding = "CONTENT"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "ad68ee6e9d3c42bea2b682764dd4d386"
